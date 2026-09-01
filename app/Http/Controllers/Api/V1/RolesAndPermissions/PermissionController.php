@@ -1,0 +1,74 @@
+<?php
+
+namespace App\Http\Controllers\Api\V1\RolesAndPermissions;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\Permissions\SyncRolesRequest;
+use App\Models\User;
+use App\Services\Roles_and_Permissions\PermissionService;
+use Illuminate\Http\Request;
+use Spatie\Permission\Models\Permission;
+
+class PermissionController extends Controller
+{
+
+    public PermissionService $permissionService;
+
+    /**
+     * Create a new controller instance.
+     */
+    public function __construct(PermissionService $permissionService)
+    {
+        $this->permissionService = $permissionService;
+    }
+
+    /**
+     * Get all permissions
+     */
+    public function index(Request $request)
+    {
+        $data = $request->only(['name']);
+        $permissions = $this->permissionService->getAllPermissions($data);
+        return $this->successMessage('Permissions retrieved successfully', ['permissions' => $permissions], 200);
+    }
+
+    /**
+     * Show a specific permission
+     */
+    public function show(Permission $permission)
+    {
+        $permission = $this->permissionService->getPermission($permission);
+        return $this->successMessage('Permission retrieved successfully', ['permission' => $permission], 200);
+    }
+
+
+    /**
+     * Assign permission to user
+     */
+    public function syncRolesToPermission(Permission $permission, SyncRolesRequest $request)
+    {
+        $roles = $request->validated();
+        $status = $this->permissionService->syncRoles($permission, $roles);
+        return $this->successMessage('Roles synced to permission successfully', ['status' => $status], 200);
+    }
+
+
+    /**
+     * Assign permission to user
+     */
+    public  function givePermissionToUser(User $user, Permission $permission)
+    {
+        $status = $this->permissionService->giveToUser($permission, $user);
+        return $this->successMessage('Permission assigned to user successfully', ['status' => $status], 200);
+    }
+
+
+    /**
+     * Remove permission from user
+     */
+    public  function removePermissionFromUser(User $user, Permission $permission)
+    {
+        $status = $this->permissionService->revokeFromUser($permission, $user);
+        return $this->successMessage('Permission removed from user successfully', ['status' => $status], 200);
+    }
+}
