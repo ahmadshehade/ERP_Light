@@ -4,6 +4,7 @@ namespace Modules\Tenant\Providers;
 
 use Nwidart\Modules\Support\ModuleServiceProvider;
 use Illuminate\Console\Scheduling\Schedule;
+use Modules\Tenant\Console\ProccessScheduledProjects;
 use Modules\Tenant\Console\ProccessScheduledTasks;
 
 class TenantServiceProvider extends ModuleServiceProvider
@@ -26,7 +27,8 @@ class TenantServiceProvider extends ModuleServiceProvider
      * @var string[]
      */
     protected array $commands = [
-        ProccessScheduledTasks::class
+        ProccessScheduledTasks::class,
+        ProccessScheduledProjects::class
     ];
 
     /**
@@ -47,5 +49,6 @@ class TenantServiceProvider extends ModuleServiceProvider
     protected function configureSchedules(Schedule $schedule): void
     {
         $schedule->command('tenant:process-scheduled-tasks')->everySecond();
+        $schedule->command('tenant:process-scheduled-projects')->everyTwoHours();
     }
 }

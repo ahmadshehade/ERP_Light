@@ -78,11 +78,9 @@ class UpdateProjectRequest extends FormRequest
                 'sometimes',
                 'boolean',
             ],
-
-            'status' => [
+            'start_date' => [
                 'sometimes',
-                'string',
-                Rule::enum(ProjectStatus::class),
+                'date',
             ],
 
             'priority' => [
@@ -157,11 +155,7 @@ class UpdateProjectRequest extends FormRequest
             'is_active.boolean' =>
             'The :attribute field must be a boolean.',
 
-            'status.string' =>
-            'The :attribute field must be a string.',
-
-            'status.enum' =>
-            'The :attribute field must be a valid enum value.',
+            'start_date.date' => 'the :attribute field must be a date.',
 
             'priority.string' =>
             'The :attribute field must be a string.',
@@ -206,6 +200,7 @@ class UpdateProjectRequest extends FormRequest
 
             'media' => 'Project Media',
             'teamIds' => 'Project Teams',
+            'start_date' => 'Project Start Date',
         ];
     }
 }

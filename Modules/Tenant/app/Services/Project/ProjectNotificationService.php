@@ -8,9 +8,14 @@ use Illuminate\Support\Facades\Notification;
 use Modules\Tenant\Enum\TenantRoles;
 use Modules\Tenant\Models\Project;
 use Modules\Tenant\Models\TenantUser;
+use Modules\Tenant\Notifications\Projects\CanceledProjectNotification;
+use Modules\Tenant\Notifications\Projects\CompletedProjectNotification;
 use Modules\Tenant\Notifications\Projects\DeleteProjectNotification;
 use Modules\Tenant\Notifications\Projects\MakeProjectNotification;
+use Modules\Tenant\Notifications\Projects\OnHoldProjectNotification;
 use Modules\Tenant\Notifications\Projects\RestoreProjectNotification;
+use Modules\Tenant\Notifications\Projects\ResumedProjectNotification;
+use Modules\Tenant\Notifications\Projects\StartProjectNotification;
 use Modules\Tenant\Notifications\Projects\UpdateProjectNotification;
 
 class ProjectNotificationService
@@ -196,5 +201,127 @@ class ProjectNotificationService
                 is_active: $data['is_active'],
             )
         );
+    }
+
+    public function startProjectNotify(Project $project): void
+    {
+        $receivers = $this->getReceivers();
+        $data = $this->prepareData($project);
+        Notification::send($receivers, new StartProjectNotification(
+            name_en: $data['project_name_en'],
+            name_ar: $data['project_name_ar'],
+            description_en: $data['project_description_en'],
+            description_ar: $data['project_description_ar'],
+            status: $data['status'],
+            priority: $data['priority'],
+            company_name_en: $data['company_name_en'],
+            company_name_ar: $data['company_name_ar'],
+            is_active: $data['is_active'],
+            start_date: $data['start_date'],
+            end_date: $data['end_date'],
+            teams: $data['teams'],
+        ));
+    }
+
+    /**
+     * Summary of OnHoldProjectNotify
+     * @param Project $project
+     * @return void
+     */
+    public function onHoldProjectNotify(Project $project): void
+    {
+        $receivers = $this->getReceivers();
+        $data = $this->prepareData($project);
+        Notification::send($receivers, new OnHoldProjectNotification(
+            name_en: $data['project_name_en'],
+            name_ar: $data['project_name_ar'],
+            description_en: $data['project_description_en'],
+            description_ar: $data['project_description_ar'],
+            status: $data['status'],
+            priority: $data['priority'],
+            company_name_en: $data['company_name_en'],
+            company_name_ar: $data['company_name_ar'],
+            is_active: $data['is_active'],
+            start_date: $data['start_date'],
+            end_date: $data['end_date'],
+            teams: $data['teams'],
+        ));
+    }
+
+
+    /**
+     * Summary of resumeProjectNotify
+     * @param Project $project
+     * @return void
+     */
+    public function resumeProjectNotify(Project $project): void
+    {
+        $receivers = $this->getReceivers();
+        $data = $this->prepareData($project);
+        Notification::send($receivers, new ResumedProjectNotification(
+            name_en: $data['project_name_en'],
+            name_ar: $data['project_name_ar'],
+            description_en: $data['project_description_en'],
+            description_ar: $data['project_description_ar'],
+            status: $data['status'],
+            priority: $data['priority'],
+            company_name_en: $data['company_name_en'],
+            company_name_ar: $data['company_name_ar'],
+            is_active: $data['is_active'],
+            start_date: $data['start_date'],
+            end_date: $data['end_date'],
+            teams: $data['teams'],
+        ));
+    }
+
+
+    /**
+     * Summary of cancelProjectNotify
+     * @param Project $project
+     * @return void
+     */
+    public function cancelProjectNotify(Project $project): void
+    {
+        $receivers = $this->getReceivers();
+        $data = $this->prepareData($project);
+        Notification::send($receivers, new CanceledProjectNotification(
+            name_en: $data['project_name_en'],
+            name_ar: $data['project_name_ar'],
+            description_en: $data['project_description_en'],
+            description_ar: $data['project_description_ar'],
+            status: $data['status'],
+            priority: $data['priority'],
+            company_name_en: $data['company_name_en'],
+            company_name_ar: $data['company_name_ar'],
+            is_active: $data['is_active'],
+            start_date: $data['start_date'],
+            end_date: $data['end_date'],
+            teams: $data['teams'],
+        ));
+    }
+
+    /**
+     * Summary of completeNotify
+     * @param Project $project
+     * @return void
+     */
+    public function completeProjectNotify(Project $project): void
+    {
+        $receivers = $this->getReceivers();
+        $data = $this->prepareData($project);
+        Notification::send($receivers, new CompletedProjectNotification(
+            name_en: $data['project_name_en'],
+            name_ar: $data['project_name_ar'],
+            description_en: $data['project_description_en'],
+            description_ar: $data['project_description_ar'],
+            status: $data['status'],
+            priority: $data['priority'],
+            company_name_en: $data['company_name_en'],
+            company_name_ar: $data['company_name_ar'],
+            is_active: $data['is_active'],
+            start_date: $data['start_date'],
+            end_date: $data['end_date'],
+            teams: $data['teams'],
+        ));
     }
 }

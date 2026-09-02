@@ -2,6 +2,8 @@
 
 namespace Modules\Tenant\Models;
 
+use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -14,6 +16,8 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Spatie\Translatable\HasTranslations;
 use Illuminate\Support\Str;
+use Modules\Tenant\Enum\TenantPermission;
+use Modules\Tenant\Enum\TenantRoles;
 
 // use Modules\Tenant\Database\Factories\ProjectFactory;
 
@@ -62,6 +66,42 @@ class Project extends Model implements HasMedia
         return static::creating(function (Project $project) {
             $project->uuid = (string)Str::ulid();
         });
+    }
+
+
+    /**
+     * Scope a query to only include active users.
+     */
+    public function scopeActive(Builder $query, User $user): Builder
+    {
+        $tenantUser = TenantUser::where('user_id', $user->id)->firstOrFail();
+        if (! $tenantUser->hasPermissionTo(
+            TenantPermission::TenantViewAnyProjects->value
+        )) {
+            return $query->whereRaw('1 = 0');
+        }
+        if ($tenantUser->hasRole(TenantRoles::Owner->value)) {
+            return $query;
+        }
+        if ($tenantUser->hasRole(TenantRoles::Manager->value)) {
+            return $query->where('is_active', true);
+        }
+        if ($tenantUser->hasRole(TenantRoles::Employee->value)) {
+            return $query
+                ->where('is_active', true)
+                ->whereHas('teams.tenantUsers', function ($query) use ($user) {
+                    $query->where('user_id', $user->id);
+                });
+        }
+
+
+        if ($tenantUser->hasRole(TenantRoles::Guest->value)) {
+            return $query
+                ->where('is_active', true)
+                ->where('status', ProjectStatus::Completed);
+        }
+
+        return $query->whereRaw('1 = 0');
     }
 
     // protected static function newFactory(): ProjectFactory

@@ -2,117 +2,175 @@
 
 namespace Modules\Tenant\Services\Project;
 
+use App\Enums\NameOfCache;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Modules\Tenant\Enum\ProjectStatus;
+use Modules\Tenant\Enum\TaskStatus;
 use Modules\Tenant\Models\Project;
+use RuntimeException;
 
 class ProjectStatusService
 {
-    public function change(
-        Project $project,
-        ProjectStatus $newStatus
-    ): Project {
 
-        return DB::connection('tenant')->transaction(function () use (
-            $project,
-            $newStatus
-        ) {
+    public function __construct(public ProjectNotificationService $notify) {}
+    protected function flushCache(): void
+    {
+        Cache::tags(NameOfCache::PROJECT->value)->flush();
+    }
 
-            $currentStatus = $project->status;
-            if ($currentStatus === $newStatus) {
-                return $project;
-            }
-            if (! $this->canTransition($currentStatus, $newStatus)) {
-                throw new \DomainException(
-                    "Cannot change project status from {$currentStatus->value} to {$newStatus->value}."
+    /**
+     * Summary of start
+     * @param Project $project
+     * @return Project
+     */
+    public function start(Project $project): Project
+    {
+        return DB::connection('tenant')->transaction(function () use ($project) {
+            if ($project->status !== ProjectStatus::Planned) {
+                throw new RuntimeException(
+                    'Project status is not planned.'
                 );
             }
-
-            $project->status = $newStatus;
-
-            match ($newStatus) {
-                ProjectStatus::Planned => $this->setPlanned($project),
-                ProjectStatus::InProgress => $this->setInProgress($project),
-                ProjectStatus::Completed => $this->setCompleted($project),
-                ProjectStatus::OnHold => $this->setOnHold($project),
-                ProjectStatus::Cancelled => $this->setCancelled($project),
-            };
+            $project->status = ProjectStatus::InProgress;
+            if ($project->start_date === null) {
+                $project->start_date = now();
+            }
+            $project->end_date = null;
             $project->save();
-            return $project->fresh();
+
+            DB::connection('tenant')->afterCommit(function () use ($project) {
+                $this->flushCache();
+                $this->notify->startProjectNotify($project);
+            });
+
+            return $project->refresh();
         });
     }
 
-    protected function canTransition(
-        ProjectStatus $currentStatus,
-        ProjectStatus $newStatus
-    ): bool {
+    /**
+     * Summary of hold
+     * @param Project $project
+     * @return Project
+     */
+    public function hold(Project $project): Project
+    {
+        return DB::connection('tenant')->transaction(function () use ($project) {
 
-        return match ($currentStatus) {
+            if ($project->status !== ProjectStatus::InProgress) {
+                throw new RuntimeException(
+                    'Only in-progress projects can be put on hold.'
+                );
+            }
 
-            ProjectStatus::Planned => in_array(
-                $newStatus,
-                [
-                    ProjectStatus::InProgress,
-                    ProjectStatus::Cancelled,
-                ],
-                true
-            ),
+            $project->status = ProjectStatus::OnHold;
+            $project->end_date = null;
 
-            ProjectStatus::InProgress => in_array(
-                $newStatus,
-                [
-                    ProjectStatus::Completed,
-                    ProjectStatus::OnHold,
-                    ProjectStatus::Cancelled,
-                ],
-                true
-            ),
+            $project->save();
 
-            ProjectStatus::OnHold => in_array(
-                $newStatus,
-                [
-                    ProjectStatus::InProgress,
-                    ProjectStatus::Cancelled,
-                ],
-                true
-            ),
+            DB::connection('tenant')->afterCommit(function () use ($project) {
+                $this->flushCache();
+                $this->notify->onHoldProjectNotify($project);
+            });
 
-            ProjectStatus::Completed,
-            ProjectStatus::Cancelled => false,
-        };
+            return $project->refresh();
+        });
     }
 
-    protected function setPlanned(Project $project): void
+    /**
+     * Summary of resume
+     * @param Project $project
+     * @return Project
+     */
+    public function resume(Project $project): Project
     {
-        $project->start_date = null;
-        $project->end_date = null;
+        return DB::connection('tenant')->transaction(function () use ($project) {
+
+            if ($project->status !== ProjectStatus::OnHold) {
+                throw new RuntimeException(
+                    'Only on-hold projects can be resumed.'
+                );
+            }
+
+            $project->status = ProjectStatus::InProgress;
+            $project->end_date = null;
+
+            $project->save();
+
+            DB::connection('tenant')->afterCommit(function () use ($project) {
+                $this->flushCache();
+                $this->notify->resumeProjectNotify($project);
+            });
+
+            return $project->refresh();
+        });
     }
 
-    protected function setInProgress(Project $project): void
+    /**
+     * Summary of cancel
+     * @param Project $project
+     * @return Project
+     */
+    public function cancel(Project $project): Project
     {
-        if ($project->start_date === null) {
-            $project->start_date = now();
-        }
+        return DB::connection('tenant')->transaction(function () use ($project) {
 
-        $project->end_date = null;
+            if ($project->status !== ProjectStatus::InProgress) {
+                throw new RuntimeException(
+                    'Only in-progress projects can be cancelled.'
+                );
+            }
+            $project->status = ProjectStatus::Cancelled;
+            $project->end_date = now();
+            $project->save();
+            $project->tasks()
+                ->whereNotIn('status', [TaskStatus::COMPLETED->value, TaskStatus::CANCELLED->value])
+                ->update([
+                    'status' => TaskStatus::CANCELLED->value,
+                ]);
+
+            DB::connection('tenant')->afterCommit(function () use ($project) {
+                $this->flushCache();
+                $this->notify->cancelProjectNotify($project);
+            });
+
+            return $project->refresh();
+        });
     }
 
-    protected function setCompleted(Project $project): void
+    /**
+     * Summary: Complete a project
+     *@param Project $project
+     *@return Project
+     */
+    public function complete(Project $project): Project
     {
-        if ($project->start_date === null) {
-            $project->start_date = now();
-        }
+        return DB::connection('tenant')->transaction(function () use ($project) {
 
-        $project->end_date = now();
-    }
-
-    protected function setOnHold(Project $project): void
-    {
-        $project->end_date = null;
-    }
-
-    protected function setCancelled(Project $project): void
-    {
-        $project->end_date = now();
+            if ($project->status !== ProjectStatus::InProgress) {
+                throw new RuntimeException(
+                    'Only in-progress projects can be completed.'
+                );
+            }
+            $hasIncompleteTasks = $project->tasks()
+                ->whereNotIn('status', [
+                    TaskStatus::COMPLETED->value,
+                    TaskStatus::CANCELLED->value,
+                ])
+                ->exists();
+            if ($hasIncompleteTasks) {
+                throw new RuntimeException(
+                    'Project cannot be completed because it has incomplete tasks.'
+                );
+            }
+            $project->status = ProjectStatus::Completed;
+            $project->end_date = now();
+            $project->save();
+            DB::connection('tenant')->afterCommit(function () use ($project) {
+                $this->flushCache();
+                $this->notify->completeProjectNotify($project);
+            });
+            return $project->refresh();
+        });
     }
 }

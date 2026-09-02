@@ -171,6 +171,16 @@ Route::middleware([
             ->name('project.update');
         Route::delete('/{project}', [ProjectController::class, 'destroy'])
             ->name('project.destroy');
+
+        //Actions
+        Route::post('/{project}/onhold', [ProjectController::class, 'onHold'])
+            ->name('project.onHold');
+        Route::post('/{project}/resume', [ProjectController::class, 'resume'])
+            ->name('project.resume');
+        Route::post('/{project}/cancel', [ProjectController::class, 'cancel'])
+            ->name('project.cancel');
+        Route::post('/{project}/complete', [ProjectController::class, 'complete'])
+            ->name('project.complete');
     });
 
     //Tasks

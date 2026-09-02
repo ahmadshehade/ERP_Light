@@ -65,6 +65,10 @@ class StoreProjectRequest extends BaseRequest
                 'string',
                 'max:255',
             ],
+            'start_date' => [
+                'required',
+                'date'
+            ],
 
             'is_active' => [
                 'required',
@@ -144,6 +148,9 @@ class StoreProjectRequest extends BaseRequest
             'teamIds.*.integer' => 'Each team ID must be an integer.',
             'teamIds.*.exists' => 'Each team ID must exist in the teams table.',
 
+            'start_date.required' => 'The :attribute field is required.',
+            'start_date.date' => 'The :attribute field must be a valid date.',
+
 
 
         ];
@@ -162,6 +169,7 @@ class StoreProjectRequest extends BaseRequest
             'media' => 'Project Media',
             'end_date' => 'Project End Date',
             'teamIds' => 'Project Teams',
+            'start_date' => 'Project Start Date',
         ];
     }
 }

@@ -4,6 +4,7 @@ namespace Modules\Tenant\Policies;
 
 use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
+use Modules\Tenant\Enum\ProjectStatus;
 use Modules\Tenant\Enum\TenantPermission;
 use Modules\Tenant\Models\Project;
 use Modules\Tenant\Models\TenantUser;
@@ -108,5 +109,41 @@ class ProjectPolicy extends TenantBasePolicy
     {
         $tenantUser = TenantUser::where('user_id', $user->id)->first();
         return $tenantUser->hasPermissionTo(TenantPermission::TenantRestoreAllProjects->value);
+    }
+
+    /**
+     * Determine whether the user hasPermissionTo on hold.
+     */
+    public  function onHold(User $user, Project $project): bool
+    {
+        $tenantUser = TenantUser::where('user_id', $user->id)->first();
+        return $tenantUser->hasPermissionTo(TenantPermission::TenantOnHoldProject->value) && $project->status == ProjectStatus::InProgress;
+    }
+
+    /**
+     * Determine whether the user hasPermissionTo complete.
+     */
+    public  function complete(User $user, Project $project): bool
+    {
+        $tenantUser = TenantUser::where('user_id', $user->id)->first();
+        return $tenantUser->hasPermissionTo(TenantPermission::TenantCompleteProject->value) && $project->status == ProjectStatus::InProgress;
+    }
+
+    /**
+     * Determine whether the user hasPermissionTo cancel.
+     */
+    public function resume(User $user, Project $project): bool
+    {
+        $tenantUser = TenantUser::where('user_id', $user->id)->first();
+        return $tenantUser->hasPermissionTo(TenantPermission::TenantResumeProject->value) && $project->status == ProjectStatus::OnHold;
+    }
+
+    /**
+     * Determine whether the user hasPermissionTo cancel.
+     */
+    public function cancel(User $user, Project $project)
+    {
+        $tenantUser = TenantUser::where('user_id', $user->id)->first();
+        return $tenantUser->hasPermissionTo(TenantPermission::TenantCancelProject->value) && $project->status == ProjectStatus::InProgress;
     }
 }

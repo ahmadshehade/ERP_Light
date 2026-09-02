@@ -10,11 +10,12 @@ use Modules\Tenant\Http\Requests\Api\V1\Projects\StoreProjectRequest;
 use Modules\Tenant\Http\Requests\Api\V1\Projects\UpdateProjectRequest;
 use Modules\Tenant\Models\Project;
 use Modules\Tenant\Services\Project\ProjectService;
+use Modules\Tenant\Services\Project\ProjectStatusService;
 
 class ProjectController extends Controller
 {
     use AuthorizesRequests;
-    public  function __construct(public ProjectService $projectService) {}
+    public  function __construct(public ProjectService $projectService, public ProjectStatusService $state) {}
     /**
      * Display a listing of the resource.
      */
@@ -135,5 +136,55 @@ class ProjectController extends Controller
         $this->authorize('forceDeleteAll', Project::class);
         $data = $this->projectService->forceDeleteAll();
         return $this->successMessage('Suuccessfully Restored Project', ['project' => $data], 200);
+    }
+
+
+    /**
+     * Summary of onHold
+     * @param Project $project
+     * @return JsonResponse
+     */
+    public function onHold(Project $project): JsonResponse
+    {
+        $this->authorize('onHold', $project);
+        $data = $this->state->hold($project);
+        return $this->successMessage('Suuccessfully On Hold Project', ['project' => $data], 200);
+    }
+
+
+    /**
+     * Summary of resume
+     * @param Project $project
+     * @return JsonResponse
+     */
+    public function resume(Project $project): JsonResponse
+    {
+        $this->authorize('resume', $project);
+        $data = $this->state->resume($project);
+        return $this->successMessage('Suuccessfully Resume Project', ['project' => $data], 200);
+    }
+
+    /**
+     * Summary of cancel
+     * @param Project $project
+     * @return JsonResponse
+     */
+    public function cancel(Project $project): JsonResponse
+    {
+        $this->authorize('cancel', $project);
+        $data = $this->state->cancel($project);
+        return $this->successMessage('Suuccessfully Cancel Project', ['project' => $data], 200);
+    }
+
+    /**
+     * Summary of complete
+     * @param Project $project
+     * @return JsonResponse
+     */
+    public function complete(Project $project): JsonResponse
+    {
+        $this->authorize('complete', $project);
+        $data = $this->state->complete($project);
+        return $this->successMessage('Suuccessfully Complete Project', ['project' => $data], 200);
     }
 }

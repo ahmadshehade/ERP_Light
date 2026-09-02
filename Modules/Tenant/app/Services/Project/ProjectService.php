@@ -60,7 +60,7 @@ class ProjectService
     {
         $cacheKey = $this->genKey($data, 'no_trashed');
         return Cache::tags(NameOfCache::PROJECT->value)->remember($cacheKey, self::TIME_TTL, function () use ($data) {
-            $projects = Project::query()->with('tasks');
+            $projects = Project::active(Auth::user())->with('tasks');
             if (!empty($data)) {
                 $this->filterData($projects, $data);
             }
@@ -87,6 +87,7 @@ class ProjectService
     {
         return DB::connection('tenant')->transaction(function () use ($data) {
             $media = Arr::pull($data, 'media', []);
+            $teamIds = Arr::pull($data, 'teamIds', []);
             $data['status'] = ProjectStatus::Planned->value;
             $project = Project::create($data);
             $mediaPaths = [];
@@ -101,8 +102,8 @@ class ProjectService
                 }
             }
             $flag = false;
-            if (isset($data['teamIds'])) {
-                $project->teams()->attach($data['teamIds']);
+            if ($teamIds !== []) {
+                $project->teams()->attach($teamIds);
                 $flag = true;
             }
             DB::connection('tenant')->afterCommit(function () use ($project, $mediaPaths, $flag) {
@@ -131,6 +132,7 @@ class ProjectService
     {
         return DB::connection('tenant')->transaction(function () use ($project, $data) {
             $media = Arr::pull($data, 'media', []);
+            $teamIds = Arr::pull($data, 'teamIds', []);
             $mediaPaths = [];
             if ($media != []) {
                 foreach ($media as $file) {
@@ -144,12 +146,11 @@ class ProjectService
             }
             $addedTeamIds = [];
             $removedTeamIds = [];
-            if (isset($data['teamIds'])) {
+            if ($teamIds !== []) {
                 $oldTeamIds = $project->teams()->pluck('teams.id')->toArray();
-                $newTeamIds = $data['teamIds'];
-                $project->teams()->sync($data['teamIds']);
-                $addedTeamIds = array_diff($newTeamIds, $oldTeamIds);
-                $removedTeamIds = array_diff($oldTeamIds, $newTeamIds);
+                $project->teams()->sync($teamIds);
+                $addedTeamIds = array_diff($teamIds, $oldTeamIds);
+                $removedTeamIds = array_diff($oldTeamIds, $teamIds);
             }
             $project->update($data);
             DB::connection('tenant')->afterCommit(function () use ($project, $mediaPaths, $addedTeamIds, $removedTeamIds) {

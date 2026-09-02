@@ -35,9 +35,9 @@ class TenantPermissionManagement
                 //Team
                 TenantPermission::TenantViewAnyTeams->value,
                 TenantPermission::TenantViewTeam->value,
-                TenantPermission::TenantCreateDepartment->value,
-                TenantPermission::TenantUpdateDepartment->value,
-                TenantPermission::TenantDeleteDepartment->value,
+                TenantPermission::TenantCreateTeam->value,
+                TenantPermission::TenantUpdateTeam->value,
+                TenantPermission::TenantDeleteTeam->value,
 
                 //task
                 TenantPermission::TenantViewAnyTask->value,
@@ -51,18 +51,51 @@ class TenantPermissionManagement
                 TenantPermission::TenantOnHoldTask->value,
                 TenantPermission::TenantCancelTask->value,
 
+                //projects
+                TenantPermission::TenantViewProject->value,
+                TenantPermission::TenantViewAnyProjects->value,
+                TenantPermission::TenantCreateProject->value,
+                TenantPermission::TenantUpdateProject->value,
+                TenantPermission::TenantOnHoldProject->value,
+                TenantPermission::TenantResumeProject->value,
+
             ],
 
             NameOfRoles::Employee->value => [
+
+                // Departments
                 TenantPermission::TenantViewAnyDepartments->value,
                 TenantPermission::TenantViewDepartment->value,
+
+                // Teams
+                TenantPermission::TenantViewAnyTeams->value,
                 TenantPermission::TenantViewTeam->value,
+
+                // Projects
+                TenantPermission::TenantViewAnyProjects->value,
+                TenantPermission::TenantViewProject->value,
+
+                // Tasks
+                TenantPermission::TenantViewAnyTask->value,
+                TenantPermission::TenantViewTask->value,
+                TenantPermission::TenantUpdateTask->value,
+                TenantPermission::TenantCompleteTask->value,
+                TenantPermission::TenantOnHoldTask->value,
             ],
 
             NameOfRoles::Guest->value => [
+
+                // Departments
                 TenantPermission::TenantViewAnyDepartments->value,
                 TenantPermission::TenantViewDepartment->value,
+
+                // Teams
                 TenantPermission::TenantViewAnyTeams->value,
+                TenantPermission::TenantViewTeam->value,
+
+                // Projects
+                TenantPermission::TenantViewAnyProjects->value,
+                TenantPermission::TenantViewProject->value,
             ],
         ];
     }

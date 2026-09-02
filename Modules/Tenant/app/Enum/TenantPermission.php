@@ -75,6 +75,11 @@ enum TenantPermission: string
     case TenantGetTrashedProjects = 'tenant_get_trashed_projects';
     case TenantGetAllTrashedProjects = 'tenant_get_all_trashed_projects';
 
+        //actionProjects
+    case TenantOnHoldProject = 'tenant_on_hold_project';
+    case TenantCompleteProject = 'tenant_complete_project';
+    case TenantCancelProject = 'tenant_cancel_project';
+    case TenantResumeProject = 'tenant_resume_project';
 
         //tasks
     case TenantViewAnyTask = 'tenant_view_any_tasks';
