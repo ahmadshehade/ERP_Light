@@ -78,7 +78,6 @@ class TenantPermissionManagement
                 // Tasks
                 TenantPermission::TenantViewAnyTask->value,
                 TenantPermission::TenantViewTask->value,
-                TenantPermission::TenantUpdateTask->value,
                 TenantPermission::TenantCompleteTask->value,
                 TenantPermission::TenantOnHoldTask->value,
             ],

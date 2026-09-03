@@ -47,8 +47,8 @@ class DepartmentService
     {
         $cacheKey = $this->genKey($data, 'no_trashed');
         return Cache::tags(NameOfCache::TENANT_DEPARTMENT->value)->remember($cacheKey, self::TIME_TTL, function () use ($data) {
-            $tenantUser = TenantUser::where('user_id', Auth::user()->id)->first();
-            $departments = Department::active($tenantUser)->with(['media']);
+
+            $departments = Department::active(Auth::user())->with(['media']);
             if (!empty($data)) {
                 $this->filterData($departments, $data);
             }
@@ -104,6 +104,12 @@ class DepartmentService
     public function update(array $data, Department $department): Department
     {
         return DB::connection('tenant')->transaction(function () use ($data, $department) {
+            $department = Department::query()->whereKey($department->id)
+                ->lockForUpdate()
+                ->first();
+            if (!$department) {
+                throw new RuntimeException('Department Not Found.');
+            }
             $photo = Arr::pull($data, 'photo', []);
             $department->update($data);
             $path = null;

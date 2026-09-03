@@ -6,7 +6,7 @@ use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 use Modules\Tenant\Enum\TenantPermission;
 use Modules\Tenant\Models\Position;
-use Modules\Tenant\Models\TenantUser;
+
 
 class PositionPolicy extends TenantBasePolicy
 {
@@ -18,7 +18,7 @@ class PositionPolicy extends TenantBasePolicy
      */
     public function viewAny(User $user): bool
     {
-        $tenantUser = TenantUser::where('user_id', $user->id)->first();
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasPermissionTo(TenantPermission::TenantViewAnyPositions->value);
     }
 
@@ -28,7 +28,7 @@ class PositionPolicy extends TenantBasePolicy
      */
     public function view(User $user, Position $position): bool
     {
-        $tenantUser = TenantUser::where('user_id', $user->id)->first();
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasPermissionTo(TenantPermission::TenantViewPosition->value);
     }
     /**
@@ -37,7 +37,7 @@ class PositionPolicy extends TenantBasePolicy
      */
     public function create(User $user): bool
     {
-        $tenantUser = TenantUser::where('user_id', $user->id)->first();
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasPermissionTo(TenantPermission::TenantCreatePosition->value);
     }
 
@@ -47,7 +47,7 @@ class PositionPolicy extends TenantBasePolicy
      */
     public function update(User $user, Position $position): bool
     {
-        $tenantUser = TenantUser::where('user_id', $user->id)->first();
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasPermissionTo(TenantPermission::TenantUpdatePosition->value);
     }
 
@@ -57,7 +57,7 @@ class PositionPolicy extends TenantBasePolicy
      */
     public function delete(User $user, Position $position): bool
     {
-        $tenantUser = TenantUser::where('user_id', $user->id)->first();
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasPermissionTo(TenantPermission::TenantDeletePosition->value);
     }
 
@@ -67,7 +67,7 @@ class PositionPolicy extends TenantBasePolicy
      */
     public function restore(User $user, Position $position): bool
     {
-        $tenantUser = TenantUser::where('user_id', $user->id)->first();
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasPermissionTo(TenantPermission::TenantRestorePosition->value);
     }
     /**
@@ -76,7 +76,7 @@ class PositionPolicy extends TenantBasePolicy
      */
     public function forceDelete(User $user, Position $position): bool
     {
-        $tenantUser = TenantUser::where('user_id', $user->id)->first();
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasPermissionTo(TenantPermission::TenantForceDeletePosition->value);
     }
 
@@ -86,7 +86,7 @@ class PositionPolicy extends TenantBasePolicy
      */
     public  function getTrashed(User $user, Position $position): bool
     {
-        $tenantUser = TenantUser::where('user_id', $user->id)->first();
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasPermissionTo(TenantPermission::TenantGetTrashedPositions->value);
     }
 
@@ -96,7 +96,7 @@ class PositionPolicy extends TenantBasePolicy
      */
     public function getAllTrashed(User $user): bool
     {
-        $tenantUser = TenantUser::where('user_id', $user->id)->first();
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasPermissionTo(TenantPermission::TenantGetAllTrashedPositions->value);
     }
 
@@ -106,7 +106,7 @@ class PositionPolicy extends TenantBasePolicy
      */
     public function restoreAll(User $user): bool
     {
-        $tenantUser = TenantUser::where('user_id', $user->id)->first();
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasPermissionTo(TenantPermission::TenantRestoreAllPositions->value);
     }
 
@@ -116,7 +116,7 @@ class PositionPolicy extends TenantBasePolicy
      */
     public function forceDeleteAll(User $user): bool
     {
-        $tenantUser = TenantUser::where('user_id', $user->id)->first();
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasPermissionTo(TenantPermission::TenantForceDeleteAllPositions->value);
     }
 }

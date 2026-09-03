@@ -4,6 +4,8 @@ namespace Modules\Tenant\Http\Requests\Api\V1\Department;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Modules\Tenant\Enum\TenantRoles;
+use Modules\Tenant\Models\TenantUser;
 
 class UpdateDepartmentRequest extends FormRequest
 {
@@ -35,7 +37,7 @@ class UpdateDepartmentRequest extends FormRequest
     {
         $department = $this->route('department');
 
-        return [
+        $rules = [
             'name' => ['required', 'array'],
 
             'name.en' => [
@@ -66,10 +68,6 @@ class UpdateDepartmentRequest extends FormRequest
                 'max:255',
             ],
 
-            'is_active' => [
-                'nullable',
-                'boolean',
-            ],
 
             'photo' => [
                 'nullable',
@@ -78,6 +76,15 @@ class UpdateDepartmentRequest extends FormRequest
                 'max:5100',
             ],
         ];
+        $user = $this->user();
+        $tenatnUser = TenantUser::where('user_id', $user->id)->first();
+        if ($tenatnUser->hasRole(TenantRoles::Owner->value)) {
+            $rules['is_active'] = [
+                'sometimes',
+                'boolean',
+            ];
+        }
+        return $rules;
     }
 
     public function authorize(): bool

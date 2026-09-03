@@ -4,6 +4,7 @@ namespace Modules\Tenant\Policies;
 
 use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
+use Modules\Tenant\Enum\TenantPermission;
 use Modules\Tenant\Enum\TenantRoles;
 use Modules\Tenant\Models\Team;
 
@@ -17,7 +18,7 @@ class TeamPolicy extends TenantBasePolicy
      */
     public function viewAny(User $user)
     {
-        $tenantUser = $user->tenantUsers()->where('user_id', $user->id)->first();
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasRole([
             TenantRoles::Owner->value,
             TenantRoles::Manager->value
@@ -29,11 +30,8 @@ class TeamPolicy extends TenantBasePolicy
      */
     public function view(User $user, Team $team)
     {
-        $tenantUser = $user->tenantUsers()->where('user_id', $user->id)->first();
-        return $tenantUser->hasRole([
-            TenantRoles::Owner->value,
-            TenantRoles::Manager->value
-        ]);
+        $tenantUser = $this->getTenantUser($user);
+        return $tenantUser->hasPermissionTo(TenantPermission::TenantViewTeam->value);
     }
 
     /**
@@ -41,7 +39,7 @@ class TeamPolicy extends TenantBasePolicy
      */
     public function create(User $user)
     {
-        $tenantUser = $user->tenantUsers()->where('user_id', $user->id)->first();
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasRole([
             TenantRoles::Owner->value,
             TenantRoles::Manager->value
@@ -53,7 +51,7 @@ class TeamPolicy extends TenantBasePolicy
      */
     public function update(User $user, Team $team)
     {
-        $tenantUser = $user->tenantUsers()->where('user_id', $user->id)->first();
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasRole([
             TenantRoles::Owner->value,
             TenantRoles::Manager->value
@@ -65,7 +63,8 @@ class TeamPolicy extends TenantBasePolicy
      */
     public function delete(User $user, Team $team)
     {
-        $tenantUser = $user->tenantUsers()->where('user_id', $user->id)->first();
+        $tenantUser = $this->getTenantUser($user);
+
         return $tenantUser->hasRole([
             TenantRoles::Owner->value,
             TenantRoles::Manager->value

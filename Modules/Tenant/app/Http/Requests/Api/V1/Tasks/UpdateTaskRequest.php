@@ -5,7 +5,8 @@ namespace Modules\Tenant\Http\Requests\Api\V1\Tasks;
 use App\Http\Requests\BaseRequest;
 use Illuminate\Validation\Rule;
 use Modules\Tenant\Enum\TaskPriority;
-
+use Modules\Tenant\Enum\TenantRoles;
+use Modules\Tenant\Models\TenantUser;
 
 class UpdateTaskRequest extends BaseRequest
 {
@@ -36,7 +37,7 @@ class UpdateTaskRequest extends BaseRequest
     {
         $task = $this->route('task');
 
-        return [
+        $rules = [
             'project_id' => [
                 'sometimes',
                 'integer',
@@ -106,12 +107,26 @@ class UpdateTaskRequest extends BaseRequest
                 'sometimes',
                 Rule::enum(TaskPriority::class),
             ],
-
-            'is_active' => [
+            'media' => [
                 'sometimes',
-                'boolean',
+                'array',
+            ],
+
+            'media.*' => [
+                'file',
+                'mimes:jpg,jpeg,png,webp,gif,pdf,txt,tex,rar,doc,docx,xls,xlsx,ppt,pptx,csv,odt,ods,odp,odg,odf,ott,otp,ottm,otg,otp,ots,otp,ottt,ottm,ottg,ottp,ottt,ottm,ottg,ottp',
+                'max:10240',
             ],
         ];
+        $user = $this->user();
+        $tenatnUser = TenantUser::where('user_id', $user->id)->first();
+        if ($tenatnUser->hasRole(TenantRoles::Owner->value)) {
+            $rules['is_active'] = [
+                'sometimes',
+                'boolean',
+            ];
+        }
+        return $rules;
     }
 
     /**
@@ -156,6 +171,11 @@ class UpdateTaskRequest extends BaseRequest
             'priority.enum' => 'The selected priority is invalid.',
 
             'is_active.boolean' => 'The active status must be true or false.',
+
+            'media.array' => 'The media must be an array.',
+            'media.*.file' => 'Each media item must be a valid file.',
+            'media.*.mimes' => 'Each media item must be a valid file type.',
+            'media.*.max' => 'Each media item may not exceed 10240 kilobytes.',
         ];
     }
 
@@ -182,6 +202,8 @@ class UpdateTaskRequest extends BaseRequest
             'priority' => 'priority',
 
             'is_active' => 'active status',
+            'media' => 'media',
+            'media.*' => 'media item',
         ];
     }
 

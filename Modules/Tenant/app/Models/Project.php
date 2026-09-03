@@ -114,7 +114,36 @@ class Project extends Model implements HasMedia
      */
     public function registerMediaCollections(): void
     {
-        $this->addMediaCollection('project');
+        $this->addMediaCollection('profile')
+            ->acceptsFile(function ($file) {
+                return in_array(
+                    $file->mimeType,
+                    [
+                        'image/jpeg',
+                        'image/png',
+                        'image/webp',
+                        'image/gif',
+
+                        'application/pdf',
+                        'text/plain',
+
+                        'application/msword',
+                        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+
+                        'application/vnd.ms-excel',
+                        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+
+                        'application/vnd.ms-powerpoint',
+                        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+
+                        'text/csv',
+
+                        'application/zip',
+                        'application/x-rar-compressed',
+                    ],
+                    true
+                );
+            });
     }
 
     /**

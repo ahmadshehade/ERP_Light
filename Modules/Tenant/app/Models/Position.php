@@ -65,7 +65,7 @@ class Position extends Model
      * @parma User $user
      * @return Builder
      */
-    public function scopeAvaliable(Builder $builder, User $user): Builder
+    public function scopeActive(Builder $builder, User $user): Builder
     {
         $tenantUser = TenantUser::where('user_id', $user->id)->first();
         if ($tenantUser->hasRole(TenantRoles::Owner->value)) {

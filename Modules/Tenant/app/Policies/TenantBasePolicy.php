@@ -7,6 +7,7 @@ use Illuminate\Auth\Access\HandlesAuthorization;
 use Modules\Tenant\Enum\TenantRoles;
 use Modules\Tenant\Models\TenantUser;
 
+
 class TenantBasePolicy
 {
     use HandlesAuthorization;
@@ -27,5 +28,15 @@ class TenantBasePolicy
             return true;
         }
         return null;
+    }
+
+    /**
+     * Summary of getTenantUser
+     * @param User $user
+     * @return TenantUser
+     */
+    public function getTenantUser(User $user): TenantUser
+    {
+        return TenantUser::where('user_id', $user->id)->first();
     }
 }

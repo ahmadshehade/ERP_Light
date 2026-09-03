@@ -2,6 +2,7 @@
 
 namespace Modules\Tenant\Policies;
 
+use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 use Modules\Tenant\Enum\TenantPermission;
 use Modules\Tenant\Models\TenantUser;
@@ -12,51 +13,56 @@ class TenantUserPolicy extends TenantBasePolicy
 
     /**
      * Summary of viewAny
-     * @param TenantUser $user
+     * @param User $user
      * @return bool
      */
-    public function viewAny(TenantUser $user): bool
+    public function viewAny(User $user): bool
     {
-        return $user->hasPermissionTo(TenantPermission::TenantViewAnyUsers->value);
+        $tenatUser = $this->getTenantUser($user);
+        return $tenatUser->hasPermissionTo(TenantPermission::TenantViewAnyUsers->value);
     }
 
     /**
      * Summary of view
-     * @param TenantUser $user
+     * @param User $user
      * @param TenantUser $model
      * @return bool
      */
-    public function view(TenantUser $user, TenantUser $model): bool
+    public function view(User $user, TenantUser $model): bool
     {
-        return $user->hasPermissionTo(TenantPermission::TenantViewUser->value) && $model->id === $user->id;
+        $tenantUser = $this->getTenantUser($user);
+        return $tenantUser->hasPermissionTo(TenantPermission::TenantViewUser->value) && $model->id === $user->id;
     }
     /**
      * Summary of create
-     * @param TenantUser $user
+     * @param User $user
      * @return bool
      */
-    public function create(TenantUser $user): bool
+    public function create(User $user): bool
     {
-        return $user->hasPermissionTo(TenantPermission::TenantCreateUser->value);
+        $tenantUser =   $this->getTenantUser($user);
+        return $tenantUser->hasPermissionTo(TenantPermission::TenantCreateUser->value);
     }
 
     /**
      * Summary of update
-     * @param TenantUser $user
+     * @param User $user
      * @param TenantUser $model
      */
-    public function update(TenantUser $user, TenantUser $model): bool
+    public function update(User $user, TenantUser $model): bool
     {
-        return $user->hasPermissionTo(TenantPermission::TenantUpdateUser->value);
+        $tenantUser = $this->getTenantUser($user);
+        return $tenantUser->hasPermissionTo(TenantPermission::TenantUpdateUser->value);
     }
 
     /**
      * Summary of delete
-     * @param TenantUser $user
+     * @param User $user
      * @param TenantUser $model
      */
-    public  function delete(TenantUser $user, TenantUser $model)
+    public  function delete(User $user, TenantUser $model)
     {
-        return $user->hasPermissionTo(TenantPermission::TenantDeleteUser->value);
+        $tenantUser = $this->getTenantUser($user);
+        return $tenantUser->hasPermissionTo(TenantPermission::TenantDeleteUser->value);
     }
 }

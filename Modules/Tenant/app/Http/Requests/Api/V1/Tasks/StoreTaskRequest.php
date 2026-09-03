@@ -5,7 +5,9 @@ namespace Modules\Tenant\Http\Requests\Api\V1\Tasks;
 use App\Http\Requests\BaseRequest;
 use Illuminate\Validation\Rule;
 use Modules\Tenant\Enum\TaskPriority;
+use Modules\Tenant\Enum\TenantRoles;
 use Modules\Tenant\Models\Task;
+use Modules\Tenant\Models\TenantUser;
 use Override;
 
 class StoreTaskRequest extends BaseRequest
@@ -31,7 +33,7 @@ class StoreTaskRequest extends BaseRequest
      */
     public function rules(): array
     {
-        return [
+        $rules= [
             'project_id' => [
                 'required',
                 'integer',
@@ -97,11 +99,29 @@ class StoreTaskRequest extends BaseRequest
                 Rule::enum(TaskPriority::class),
             ],
 
-            'is_active' => [
-                'required',
-                'boolean',
+
+
+            'media' => [
+                'sometimes',
+                'array',
+            ],
+
+            'media.*' => [
+                'file',
+                'mimes:jpg,jpeg,png,webp,gif,pdf,txt,tex,rar,doc,docx,xls,xlsx,ppt,pptx,csv,odt,ods,odp,odg,odf,ott,otp,ottm,otg,otp,ots,otp,ottt,ottm,ottg,ottp,ottt,ottm,ottg,ottp',
+                'max:10240',
             ],
         ];
+        $user=$this->user();
+        $tenatnUser=TenantUser::where('user_id',$user->id)->first();
+        if($tenatnUser->hasRole(TenantRoles::Owner->value)){
+             $rules['is_active'] = [
+                'sometimes',
+                'boolean',
+            ];
+        }
+        return $rules;
+
     }
 
     /**
@@ -148,10 +168,11 @@ class StoreTaskRequest extends BaseRequest
             'description.en.required' => 'The English description is required.',
             'description.en.string' => 'The English description must be a string.',
             'description.en.max' => 'The English description may not exceed 255 characters.',
-
+            'description.en.unique' => 'The English description has already been taken.',
             'description.ar.required' => 'The Arabic description is required.',
             'description.ar.string' => 'The Arabic description must be a string.',
             'description.ar.max' => 'The Arabic description may not exceed 255 characters.',
+            'description.ar.unique' => 'The Arabic description has already been taken.',
 
             'start_date.required' => 'The start date is required.',
             'start_date.date' => 'The start date must be a valid date.',
@@ -164,8 +185,13 @@ class StoreTaskRequest extends BaseRequest
             'priority.required' => 'The priority is required.',
             'priority.enum' => 'The selected priority is invalid.',
 
-            'is_active.required' => 'The active status is required.',
+
             'is_active.boolean' => 'The active status must be true or false.',
+
+            'media.array' => 'The media must be an array.',
+            'media.*.file' => 'Each media item must be a valid file.',
+            'media.*.mimes' => 'Each media item must be a valid file type.',
+            'media.*.max' => 'Each media item may not exceed 10240 kilobytes.',
         ];
     }
 
@@ -194,6 +220,8 @@ class StoreTaskRequest extends BaseRequest
             'priority' => 'priority',
 
             'is_active' => 'active status',
+            'media' => 'media',
+            'media.*' => 'media item',
         ];
     }
 }

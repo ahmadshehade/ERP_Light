@@ -4,11 +4,16 @@ namespace Modules\Tenant\Services\Task;
 
 use App\Enums\NameOfCache;
 use App\Traits\ApplyFilters;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Modules\Tenant\Models\Task;
 use RuntimeException;
+use Illuminate\Support\Arr;
+use Modules\Tenant\Enum\ProjectStatus;
+use Modules\Tenant\Jobs\ProcessTaskMediJob;
+use Modules\Tenant\Models\Project;
 
 class TaskService
 {
@@ -53,7 +58,7 @@ class TaskService
     {
         $cacheKey = $this->genKey($data, 'no_trashed');
         return Cache::tags(NameOfCache::TASK->value)->remember($cacheKey, self::TIME_TTL, function () use ($data) {
-            $tasks = Task::query();
+            $tasks = Task::active(Auth::user());
             if (!empty($data)) {
                 $this->filterData($tasks, $data);
             }
@@ -68,7 +73,7 @@ class TaskService
      */
     public  function get(Task $task): Task
     {
-        return $task;
+        return $task->active(Auth::user())->load('project', 'team.tenantUsers.user');
     }
 
     /**
@@ -79,13 +84,29 @@ class TaskService
     public function store(array $data): Task
     {
         return DB::connection('tenant')->transaction(function () use ($data) {
+            $this->checkProjectStatus($data['project_id']);
+            $media = Arr::pull($data, 'media', []);
             if (isset($data['status'])) {
                 unset($data['status']);
             }
             $task = Task::create($data);
-            DB::connection('tenant')->afterCommit(function () use ($task) {
+            $mediaPaths = [];
+            if ($media != []) {
+                foreach ($media as $file) {
+                    if ($file instanceof UploadedFile) {
+                        $mediaPaths[] = $file->store(
+                            'temp/task/' . $task->id,
+                            'local'
+                        );
+                    }
+                }
+            }
+            DB::connection('tenant')->afterCommit(function () use ($task, $mediaPaths) {
                 $this->flushCache();
                 $this->notify->addNewTaskNotify($task);
+                if (!empty($mediaPaths)) {
+                    dispatch(new ProcessTaskMediJob($task->id, $mediaPaths));
+                }
             });
             return $task->load('project', 'team.tenantUsers.user');
         });
@@ -99,15 +120,39 @@ class TaskService
      */
     public  function update(array $data, Task $task): Task
     {
-
         return DB::connection('tenant')->transaction(function () use ($data, $task) {
+
+            $this->checkProjectStatus($task->project_id);
+            $task = Task::query()
+                ->whereKey($task->id)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$task) {
+                throw new RuntimeException('Task Not Found.');
+            }
+            $media = Arr::pull($data, 'media', []);
             if (isset($data['status'])) {
                 unset($data['status']);
             }
             $task->update($data);
-            DB::connection('tenant')->afterCommit(function () use ($task) {
+            $mediaPaths = [];
+            if ($media != []) {
+                foreach ($media as $file) {
+                    if ($file instanceof UploadedFile) {
+                        $mediaPaths[] = $file->store(
+                            'temp/task/' . $task->id,
+                            'local'
+                        );
+                    }
+                }
+            }
+            DB::connection('tenant')->afterCommit(function () use ($task, $mediaPaths) {
                 $this->flushCache();
                 $this->notify->updateTaskNotify($task);
+                if (!empty($mediaPaths)) {
+                    dispatch(new ProcessTaskMediJob($task->id, $mediaPaths));
+                }
             });
             return $task->load('project', 'team.tenantUsers.user');
         });
@@ -258,5 +303,31 @@ class TaskService
             });
             return true;
         });
+    }
+
+
+
+    /**
+     * Summary of checkProjectStatus
+     * @param int $projectId
+     * @return bool
+     * @throws RuntimeException
+     */
+    private function checkProjectStatus(int $projectId): bool
+    {
+        $project = Project::query()
+            ->whereKey($projectId)
+            ->lockForUpdate()
+            ->first();
+        if (!$project) {
+            throw new RuntimeException('Project Not Found.');
+        }
+        if (
+            $project->status == ProjectStatus::Completed
+            || $project->status == ProjectStatus::Cancelled
+        ) {
+            throw new RuntimeException('Project Is Completed Or Cancelled.');
+        }
+        return true;
     }
 }

@@ -6,6 +6,8 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Modules\Tenant\Enum\ProjectPriority;
 use Modules\Tenant\Enum\ProjectStatus;
+use Modules\Tenant\Enum\TenantRoles;
+use Modules\Tenant\Models\TenantUser;
 
 class UpdateProjectRequest extends FormRequest
 {
@@ -34,7 +36,7 @@ class UpdateProjectRequest extends FormRequest
 
     public function rules(): array
     {
-        return [
+        $rules = [
 
             'name' => [
                 'nullable',
@@ -74,10 +76,7 @@ class UpdateProjectRequest extends FormRequest
                 'max:255',
             ],
 
-            'is_active' => [
-                'sometimes',
-                'boolean',
-            ],
+
             'start_date' => [
                 'sometimes',
                 'date',
@@ -95,7 +94,7 @@ class UpdateProjectRequest extends FormRequest
 
             'media.*' => [
                 'file',
-                'mimes:jpg,jpeg,png,webp,gif,pdf,txt',
+                'mimes:jpg,jpeg,png,webp,gif,pdf,txt,tex,rar,doc,docx,xls,xlsx,ppt,pptx,csv,odt,ods,odp,odg,odf,ott,otp,ottm,otg,otp,ots,otp,ottt,ottm,ottg,ottp,ottt,ottm,ottg,ottp',
                 'max:10240',
             ],
             'teamIds' => [
@@ -108,6 +107,15 @@ class UpdateProjectRequest extends FormRequest
                 'exists:teams,id',
             ],
         ];
+        $user = $this->user();
+        $tenatUser = TenantUser::where('user_id', $user->id)->first();
+        if ($tenatUser->hasRole(TenantRoles::Owner->value)) {
+            $rules['is_active'] = [
+                'sometimes',
+                'boolean',
+            ];
+        }
+        return $rules;
     }
 
     public function authorize(): bool
@@ -170,7 +178,7 @@ class UpdateProjectRequest extends FormRequest
             'Each media item must be a valid file.',
 
             'media.*.mimes' =>
-            'Each media file must be one of: jpg, jpeg, png, webp, gif, pdf, txt.',
+            'Each media item must be a valid file type.',
 
             'media.*.max' =>
             'Each media file size must not exceed 10MB.',

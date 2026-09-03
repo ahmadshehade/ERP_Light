@@ -75,7 +75,7 @@ class ProjectService
      */
     public function get(Project $project): Project
     {
-        return $project->load('media', 'tasks');
+        return $project->active(Auth::user())->load('media', 'tasks');
     }
 
     /**
@@ -131,6 +131,13 @@ class ProjectService
     public function update(array $data, Project $project): Project
     {
         return DB::connection('tenant')->transaction(function () use ($project, $data) {
+            $project = Project::query()
+                ->whereKey($project->id)
+                ->lockForUpdate()
+                ->first();
+            if (!$project) {
+                throw new RuntimeException('Project Not Found.');
+            }
             $media = Arr::pull($data, 'media', []);
             $teamIds = Arr::pull($data, 'teamIds', []);
             $mediaPaths = [];

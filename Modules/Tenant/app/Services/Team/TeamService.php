@@ -67,7 +67,7 @@ class TeamService
      */
     public function get(Team $team)
     {
-        return $team;
+        return $team->active(Auth::user())->load('media');
     }
 
     /**

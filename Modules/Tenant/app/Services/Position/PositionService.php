@@ -55,7 +55,7 @@ class PositionService
     {
         $cacheKey = $this->genKey($data, 'no_trashed');
         return Cache::tags(NameOfCache::POSITION->value)->remember($cacheKey, self::TIME_TTL, function () use ($data) {
-            $positions = Position::query();
+            $positions = Position::active(Auth::user());
             if (!empty($data)) {
                 $this->filterData($positions, $data);
             }
@@ -87,12 +87,19 @@ class PositionService
      */
     public function get(Position $position): Position
     {
-        return $position;
+        return $position->active(Auth::user());
     }
 
     public  function update(Position $position, array $data): Position
     {
         return DB::connection('tenant')->transaction(function () use ($position, $data) {
+            $position = Position::query()
+                ->whereKey($position->id)
+                ->lockForUpdate()
+                ->first();
+            if (!$position) {
+                throw new RuntimeException('Position Not Found.');
+            }
             $position->update($data);
             DB::connection('tenant')->afterCommit(function () use ($position) {
                 $this->fulshCahe();

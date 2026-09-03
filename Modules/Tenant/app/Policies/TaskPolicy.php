@@ -6,7 +6,6 @@ use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 use Modules\Tenant\Enum\TenantPermission;
 use Modules\Tenant\Models\Task;
-use Modules\Tenant\Models\TenantUser;
 
 class TaskPolicy extends TenantBasePolicy
 {
@@ -20,7 +19,7 @@ class TaskPolicy extends TenantBasePolicy
      */
     public function viewAny(User $user): bool
     {
-        $tenantUser = TenantUser::where('user_id', $user->id)->first();
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasPermissionTo(TenantPermission::TenantViewAnyTask->value);
     }
 
@@ -32,12 +31,11 @@ class TaskPolicy extends TenantBasePolicy
      */
     public function view(User $user, Task $task): bool
     {
-        $tenantUser = TenantUser::where('user_id', $user->id)->first();
-        if (!$tenantUser) {
+        $tenantUser = $this->getTenantUser($user);
+        if (! $tenantUser) {
             return false;
         }
-        return $tenantUser->hasPermissionTo(TenantPermission::TenantViewTask->value)
-            || $task->team->tenantUsers->contains('id', $tenantUser->id);
+        return $tenantUser->hasPermissionTo(TenantPermission::TenantViewTask->value);
     }
 
     /**
@@ -47,9 +45,7 @@ class TaskPolicy extends TenantBasePolicy
      */
     public function create(User $user): bool
     {
-        $tenantUser = TenantUser::query()
-            ->where('user_id', $user->id)
-            ->first();
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasPermissionTo(
             TenantPermission::TenantCreateTask->value
         );
@@ -62,7 +58,7 @@ class TaskPolicy extends TenantBasePolicy
      */
     public function update(User $user, Task $task): bool
     {
-        $tenantUser = TenantUser::where('user_id', $user->id)->first();
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasPermissionTo(TenantPermission::TenantUpdateTask->value);
     }
 
@@ -73,7 +69,7 @@ class TaskPolicy extends TenantBasePolicy
      */
     public function delete(User $user, Task $task)
     {
-        $tenantUser = TenantUser::where('user_id', $user->id)->first();
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasPermissionTo(TenantPermission::TenantDeleteTask->value);
     }
 
@@ -84,7 +80,7 @@ class TaskPolicy extends TenantBasePolicy
      */
     public function restore(User $user, Task $task): bool
     {
-        $tenantUser = TenantUser::where('user_id', $user->id)->first();
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasPermissionTo(TenantPermission::TenantRestoreTask->value);
     }
 
@@ -95,7 +91,7 @@ class TaskPolicy extends TenantBasePolicy
      */
     public function forceDelete(User $user, Task $task)
     {
-        $tenantUser = TenantUser::where('user_id', $user->id)->first();
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasPermissionTo(TenantPermission::TenantForceDeleteTask->value);
     }
 
@@ -106,7 +102,7 @@ class TaskPolicy extends TenantBasePolicy
      */
     public function viewTrashed(User $user, Task $task): bool
     {
-        $tenantUser = TenantUser::where('user_id', $user->id)->first();
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasPermissionTo(TenantPermission::TenantGetTrashedTasks->value);
     }
 
@@ -117,7 +113,7 @@ class TaskPolicy extends TenantBasePolicy
      */
     public function viewAllTrashed(User $user): bool
     {
-        $tenantUser = TenantUser::where('user_id', $user->id)->first();
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasPermissionTo(TenantPermission::TenantGetAllTrashedTasks->value);
     }
 
@@ -128,7 +124,7 @@ class TaskPolicy extends TenantBasePolicy
      */
     public function restoreAll(User $user): bool
     {
-        $tenantUser = TenantUser::where('user_id', $user->id)->first();
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasPermissionTo(TenantPermission::TenantRestoreAllTasks->value);
     }
 
@@ -139,7 +135,7 @@ class TaskPolicy extends TenantBasePolicy
      */
     public function forceDeleteAll(User $user): bool
     {
-        $tenantUser = TenantUser::where('user_id', $user->id)->first();
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasPermissionTo(TenantPermission::TenantForceDeleteAllTasks->value);
     }
 
@@ -150,7 +146,7 @@ class TaskPolicy extends TenantBasePolicy
      */
     public function completeTask(User $user, Task $task): bool
     {
-        $tenantUser = TenantUser::where('user_id', $user->id)->first();
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasPermissionTo(TenantPermission::TenantCompleteTask->value);
     }
 
@@ -161,7 +157,7 @@ class TaskPolicy extends TenantBasePolicy
      */
     public function cancelTask(User $user, Task $task): bool
     {
-        $tenantUser = TenantUser::where('user_id', $user->id)->first();
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasPermissionTo(TenantPermission::TenantCancelTask->value);
     }
 
@@ -172,7 +168,7 @@ class TaskPolicy extends TenantBasePolicy
      */
     public function onHoldTask(User $user, Task $task): bool
     {
-        $tenantUser = TenantUser::where('user_id', $user->id)->first();
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasPermissionTo(TenantPermission::TenantOnHoldTask->value);
     }
 }

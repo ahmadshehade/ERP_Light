@@ -32,7 +32,7 @@ class StoreDepartmentRequest extends BaseRequest
      */
     public function rules(): array
     {
-        return [
+        $rules = [
             'name' => ['required', 'array'],
             'name.en' => ['required', 'string', 'max:255', 'unique:departments,name->en'],
             'name.ar' => ['required', 'string', 'max:255', 'unique:departments,name->ar'],
@@ -41,7 +41,7 @@ class StoreDepartmentRequest extends BaseRequest
             'description.en' => ['nullable', 'string', 'max:255'],
             'description.ar' => ['nullable', 'string', 'max:255'],
 
-            'is_active' => ['required', 'boolean'],
+
 
             'photo' => [
                 'nullable',
@@ -50,6 +50,16 @@ class StoreDepartmentRequest extends BaseRequest
                 'max:5100',
             ],
         ];
+
+        $user = $this->user();
+        $tenatnUser = TenantUser::where('user_id', $user->id)->first();
+        if ($tenatnUser->hasRole(TenantRoles::Owner->value)) {
+            $rules['is_active'] = [
+                'sometimes',
+                'boolean',
+            ];
+        }
+        return $rules;
     }
 
     /**
@@ -84,7 +94,7 @@ class StoreDepartmentRequest extends BaseRequest
             'description.en.max' => 'The :attribute field must not exceed 255 characters.',
             'description.ar.max' => 'The :attribute field must not exceed 255 characters.',
 
-            'is_active.required' => 'The :attribute field is required.',
+
             'is_active.boolean' => 'The :attribute field must be a boolean.',
 
             'photo.image' => 'The :attribute field must be an image.',

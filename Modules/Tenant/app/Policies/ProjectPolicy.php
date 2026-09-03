@@ -7,7 +7,6 @@ use Illuminate\Auth\Access\HandlesAuthorization;
 use Modules\Tenant\Enum\ProjectStatus;
 use Modules\Tenant\Enum\TenantPermission;
 use Modules\Tenant\Models\Project;
-use Modules\Tenant\Models\TenantUser;
 
 class ProjectPolicy extends TenantBasePolicy
 {
@@ -18,7 +17,7 @@ class ProjectPolicy extends TenantBasePolicy
      */
     public function viewAny(User $user): bool
     {
-        $tenantUser = TenantUser::where('user_id', $user->id)->first();
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasPermissionTo(TenantPermission::TenantViewAnyProjects->value);
     }
 
@@ -27,8 +26,8 @@ class ProjectPolicy extends TenantBasePolicy
      */
     public function view(User $user, Project $project): bool
     {
-        $tenantUser = TenantUser::where('user_id', $user->id)->first();
-        return $tenantUser->hasPermissionTo(TenantPermission::TenantViewAnyProjects->value);
+        $tenantUser = $this->getTenantUser($user);
+        return $tenantUser->hasPermissionTo(TenantPermission::TenantViewProject->value);
     }
 
     /**
@@ -36,7 +35,7 @@ class ProjectPolicy extends TenantBasePolicy
      */
     public function create(User $user): bool
     {
-        $tenantUser = TenantUser::where('user_id', $user->id)->first();
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasPermissionTo(TenantPermission::TenantCreateProject->value);
     }
 
@@ -45,7 +44,7 @@ class ProjectPolicy extends TenantBasePolicy
      */
     public function update(User $user, Project $project): bool
     {
-        $tenantUser = TenantUser::where('user_id', $user->id)->first();
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasPermissionTo(TenantPermission::TenantUpdateProject->value);
     }
 
@@ -54,7 +53,7 @@ class ProjectPolicy extends TenantBasePolicy
      */
     public function delete(User $user, Project $project): bool
     {
-        $tenantUser = TenantUser::where('user_id', $user->id)->first();
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasPermissionTo(TenantPermission::TenantDeleteProject->value);
     }
 
@@ -63,7 +62,7 @@ class ProjectPolicy extends TenantBasePolicy
      */
     public function restore(User $user, Project $project): bool
     {
-        $tenantUser = TenantUser::where('user_id', $user->id)->first();
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasPermissionTo(TenantPermission::TenantRestoreProject->value);
     }
 
@@ -72,7 +71,7 @@ class ProjectPolicy extends TenantBasePolicy
      */
     public function forceDelete(User $user, Project $project): bool
     {
-        $tenantUser = TenantUser::where('user_id', $user->id)->first();
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasPermissionTo(TenantPermission::TenantForceDeleteProject->value);
     }
 
@@ -81,7 +80,7 @@ class ProjectPolicy extends TenantBasePolicy
      */
     public function getTrashed(User $user, Project $project): bool
     {
-        $tenantUser = TenantUser::where('user_id', $user->id)->first();
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasPermissionTo(TenantPermission::TenantGetTrashedProjects->value);
     }
     /**
@@ -89,7 +88,7 @@ class ProjectPolicy extends TenantBasePolicy
      */
     public function getAllTrashed(User $user): bool
     {
-        $tenantUser = TenantUser::where('user_id', $user->id)->first();
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasPermissionTo(TenantPermission::TenantGetAllTrashedProjects->value);
     }
 
@@ -98,7 +97,7 @@ class ProjectPolicy extends TenantBasePolicy
      */
     public function forceDeleteAll(User $user): bool
     {
-        $tenantUser = TenantUser::where('user_id', $user->id)->first();
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasPermissionTo(TenantPermission::TenantForceDeleteAllProjects->value);
     }
 
@@ -107,7 +106,7 @@ class ProjectPolicy extends TenantBasePolicy
      */
     public function restoreAll(User $user): bool
     {
-        $tenantUser = TenantUser::where('user_id', $user->id)->first();
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasPermissionTo(TenantPermission::TenantRestoreAllProjects->value);
     }
 
@@ -116,7 +115,7 @@ class ProjectPolicy extends TenantBasePolicy
      */
     public  function onHold(User $user, Project $project): bool
     {
-        $tenantUser = TenantUser::where('user_id', $user->id)->first();
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasPermissionTo(TenantPermission::TenantOnHoldProject->value) && $project->status == ProjectStatus::InProgress;
     }
 
@@ -125,7 +124,7 @@ class ProjectPolicy extends TenantBasePolicy
      */
     public  function complete(User $user, Project $project): bool
     {
-        $tenantUser = TenantUser::where('user_id', $user->id)->first();
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasPermissionTo(TenantPermission::TenantCompleteProject->value) && $project->status == ProjectStatus::InProgress;
     }
 
@@ -134,7 +133,7 @@ class ProjectPolicy extends TenantBasePolicy
      */
     public function resume(User $user, Project $project): bool
     {
-        $tenantUser = TenantUser::where('user_id', $user->id)->first();
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasPermissionTo(TenantPermission::TenantResumeProject->value) && $project->status == ProjectStatus::OnHold;
     }
 
@@ -143,7 +142,7 @@ class ProjectPolicy extends TenantBasePolicy
      */
     public function cancel(User $user, Project $project)
     {
-        $tenantUser = TenantUser::where('user_id', $user->id)->first();
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasPermissionTo(TenantPermission::TenantCancelProject->value) && $project->status == ProjectStatus::InProgress;
     }
 }

@@ -2,10 +2,11 @@
 
 namespace Modules\Tenant\Policies;
 
+use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 use Modules\Tenant\Enum\TenantPermission;
 use Modules\Tenant\Models\Department;
-use Modules\Tenant\Models\TenantUser;
+
 
 class DepartmentPolicy extends TenantBasePolicy
 {
@@ -16,8 +17,9 @@ class DepartmentPolicy extends TenantBasePolicy
      * @prama TenantUser $tenantUser
      * @return bool
      */
-    public function viewAny(TenantUser $tenantUser): bool
+    public function viewAny(User $user): bool
     {
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasPermissionTo(TenantPermission::TenantViewAnyDepartments->value);
     }
     /**
@@ -27,8 +29,9 @@ class DepartmentPolicy extends TenantBasePolicy
      * @return bool
      *
      */
-    public function view(TenantUser $tenantUser, Department $department): bool
+    public function view(User $user, Department $department): bool
     {
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasPermissionTo(TenantPermission::TenantViewDepartment->value);
     }
 
@@ -37,8 +40,9 @@ class DepartmentPolicy extends TenantBasePolicy
      * @prama TenantUser $tenantUser
      * @return bool
      */
-    public function create(TenantUser $tenantUser): bool
+    public function create(User $user): bool
     {
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasPermissionTo(TenantPermission::TenantCreateDepartment->value);
     }
 
@@ -48,8 +52,9 @@ class DepartmentPolicy extends TenantBasePolicy
      * @prama Department $department
      * @return bool
      */
-    public function update(TenantUser $tenantUser, Department $department)
+    public function update(User $user, Department $department)
     {
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasPermissionTo(TenantPermission::TenantUpdateDepartment->value);
     }
 
@@ -59,8 +64,9 @@ class DepartmentPolicy extends TenantBasePolicy
      * @prama Department $department
      * @return bool
      */
-    public function delete(TenantUser $tenantUser, Department $department): bool
+    public function delete(User $user, Department $department): bool
     {
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasPermissionTo(TenantPermission::TenantDeleteDepartment->value);
     }
 
@@ -70,8 +76,9 @@ class DepartmentPolicy extends TenantBasePolicy
      * @prama Department $department
      * @return bool
      */
-    public function restore(TenantUser $tenantUser, Department $department): bool
+    public function restore(User $user, Department $department): bool
     {
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasPermissionTo(TenantPermission::TenantRestoreDepartment->value);
     }
     /**
@@ -80,9 +87,10 @@ class DepartmentPolicy extends TenantBasePolicy
      * @prama Department $department
      * @return bool
      */
-    public  function forceDelete(TenantUser $user, Department $department): bool
+    public  function forceDelete(User $user, Department $department): bool
     {
-        return $user->hasPermissionTo(TenantPermission::TenantForceDeleteDepartment->value);
+        $tenantUser = $this->getTenantUser($user);
+        return $tenantUser->hasPermissionTo(TenantPermission::TenantForceDeleteDepartment->value);
     }
 
     /**
@@ -90,8 +98,9 @@ class DepartmentPolicy extends TenantBasePolicy
      * @prama TenantUser $tenantUser
      * @return bool
      */
-    public function restoreAll(TenantUser $tenantUser): bool
+    public function restoreAll(User $user): bool
     {
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasPermissionTo(TenantPermission::TenantRestoreAllDepartments->value);
     }
     /**
@@ -99,8 +108,9 @@ class DepartmentPolicy extends TenantBasePolicy
      * @prama TenantUser $tenantUser
      * @return bool
      */
-    public function forceDeleteAll(TenantUser $tenantUser): bool
+    public function forceDeleteAll(User $user): bool
     {
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasPermissionTo(TenantPermission::TenantForceDeleteAllDepartments->value);
     }
 
@@ -110,8 +120,9 @@ class DepartmentPolicy extends TenantBasePolicy
      * @prama Department $department
      * @return bool
      */
-    public function getTrashed(TenantUser $tenantUser, Department $department): bool
+    public function getTrashed(User $user, Department $department): bool
     {
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasPermissionTo(TenantPermission::TenantGetTrashedDepartments->value);
     }
 
@@ -120,8 +131,9 @@ class DepartmentPolicy extends TenantBasePolicy
      * @prama TenantUser $tenantUser
      * @return bool
      */
-    public function getAllTrashed(TenantUser $tenantUser): bool
+    public function getAllTrashed(User $user): bool
     {
+        $tenantUser = $this->getTenantUser($user);
         return $tenantUser->hasPermissionTo(TenantPermission::TenantGetAllTrashedDepartments->value);
     }
 }

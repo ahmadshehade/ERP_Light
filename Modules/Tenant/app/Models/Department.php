@@ -2,6 +2,7 @@
 
 namespace Modules\Tenant\Models;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -74,12 +75,14 @@ class Department extends Model implements HasMedia
     /**
      * Get all of the positions for the TenantUser
      */
-    public function scopeActive(Builder $query, TenantUser $tenantUser): Builder
+    public function scopeActive(Builder $query, User $user): Builder
     {
+        $tenantUser = TenantUser::where('user_id', $user->id)->firstOrFail();
         if ($tenantUser->hasRole(TenantRoles::Owner->value)) {
             return $query;
+        } else {
+            return $query->where('is_active', true);
         }
-        return $query->where('is_active', true);
     }
 
     /**
@@ -95,6 +98,8 @@ class Department extends Model implements HasMedia
             'tenant_user_id'
         );
     }
+
+
 
     // protected static function newFactory(): DepartmentFactory
     // {

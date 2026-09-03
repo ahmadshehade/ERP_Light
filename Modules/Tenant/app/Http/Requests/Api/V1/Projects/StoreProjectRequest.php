@@ -5,7 +5,9 @@ namespace Modules\Tenant\Http\Requests\Api\V1\Projects;
 use App\Http\Requests\BaseRequest;
 use Illuminate\Validation\Rule;
 use Modules\Tenant\Enum\ProjectPriority;
+use Modules\Tenant\Enum\TenantRoles;
 use Modules\Tenant\Models\Project;
+use Modules\Tenant\Models\TenantUser;
 
 class StoreProjectRequest extends BaseRequest
 {
@@ -29,7 +31,7 @@ class StoreProjectRequest extends BaseRequest
      */
     public function rules(): array
     {
-        return [
+        $rules = [
             'name' => [
                 'required',
                 'array',
@@ -87,7 +89,7 @@ class StoreProjectRequest extends BaseRequest
 
             'media.*' => [
                 'file',
-                'mimes:jpg,jpeg,png,webp,gif,pdf,txt,tex',
+                'mimes:jpg,jpeg,png,webp,gif,pdf,txt,tex,rar,doc,docx,xls,xlsx,ppt,pptx,csv,odt,ods,odp,odg,odf,ott,otp,ottm,otg,otp,ots,otp,ottt,ottm,ottg,ottp,ottt,ottm,ottg,ottp',
                 'max:10240',
             ],
             'teamIds' => [
@@ -101,6 +103,12 @@ class StoreProjectRequest extends BaseRequest
             ],
 
         ];
+        $user = $this->user();
+        $tenantUser = TenantUser::where('user_id', $user->id)->first();
+        if ($tenantUser->hasRole(TenantRoles::Owner)) {
+            $rules['is_active'] = ['sometimes', 'boolean'];
+        }
+        return $rules;
     }
 
     /**
@@ -130,7 +138,7 @@ class StoreProjectRequest extends BaseRequest
             'description.ar.string' => 'The :attribute field must be a string.',
             'description.ar.max' => 'The :attribute field must not exceed 255 characters.',
 
-            'is_active.required' => 'The :attribute field is required.',
+
             'is_active.boolean' => 'The :attribute field must be a boolean.',
 
 
@@ -141,7 +149,7 @@ class StoreProjectRequest extends BaseRequest
 
             'media.array' => 'The :attribute must be an array.',
             'media.*.file' => 'Each media item must be a valid file.',
-            'media.*.mimes' => 'Each media file must be one of: jpg, jpeg, png, webp, gif, pdf, txt.',
+            'media.*.mimes' => 'Each media item must be a valid file type.',
             'media.*.max' => 'Each media file size must not exceed 10MB.',
 
             'teamIds.array' => 'The :attribute must be an array.',
