@@ -3,7 +3,7 @@
 namespace App\Services\Auth;
 
 use App\Enums\NameOfCache;
-use App\Enums\NameOfRoles;
+use App\Exceptions\BusinessRuleException;
 use App\Models\User;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -56,7 +56,7 @@ class AuthService
     {
         $user = User::where('email', $data['email'])->first();
         if (!$user || !Hash::check($data['password'], $user->password)) {
-            return null;
+            throw new BusinessRuleException('The provided credentials are incorrect.', 401);
         }
         $token = $user->createToken('auth_token')->plainTextToken;
 

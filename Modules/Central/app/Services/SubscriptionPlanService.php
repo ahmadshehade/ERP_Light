@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Modules\Central\Models\SubscriptionPlan;
 use Modules\Central\Services\SubscriptionPlans\SubscriptionPlanNotification;
-use RuntimeException;
+use App\Exceptions\BusinessRuleException;
 
 class SubscriptionPlanService
 {
@@ -27,9 +27,8 @@ class SubscriptionPlanService
     public function genKey(array $data = [], string $prefix = ""): string
     {
         $user = Auth::user();
-        $userKey = $user ? $user->id . "_" . $prefix . implode('_' . $user->roles->pluck('name')->toArray()) : "";
-        $cacheKey = $userKey . "_" . NameOfCache::SUBSCRIPTION_PLAN->value . "_" . md5(json_encode($data));
-        return $cacheKey;
+        $userKey = $user ? $user->id . "_" . $prefix . implode('_', $user->roles->pluck('name')->toArray()) : '';
+        return $userKey . "_" . NameOfCache::SUBSCRIPTION_PLAN->value . "_" . md5(json_encode($data));
     }
 
     /**
@@ -139,7 +138,7 @@ class SubscriptionPlanService
     {
         return DB::transaction(function () use ($subscriptionPlan) {
             if (!$subscriptionPlan->trashed()) {
-                throw new RuntimeException('The Plan Not Trashed Yeat !');
+                throw new BusinessRuleException('The Plan Not Trashed Yeat !', 403);
             }
             $subscriptionPlan->restore();
             $this->flushCache();
@@ -156,7 +155,7 @@ class SubscriptionPlanService
     {
         return DB::transaction(function () use ($subscriptionPlan) {
             if (!$subscriptionPlan->trashed()) {
-                throw new RuntimeException('The Plan Not Trashed Yeat !');
+                throw new BusinessRuleException('The Plan Not Trashed Yeat !', 403);
             }
             $subscriptionPlan->forceDelete();
             $this->flushCache();
@@ -173,7 +172,7 @@ class SubscriptionPlanService
         return DB::transaction(function () {
             $trashed = SubscriptionPlan::onlyTrashed();
             if (!$trashed->exists()) {
-                throw new RuntimeException("No trashed plans to restore.");
+                throw new BusinessRuleException("No trashed plans to restore.", 403);
             }
             $trashed->restore();
             $this->flushCache();
@@ -191,7 +190,7 @@ class SubscriptionPlanService
         return DB::transaction(function () {
             $trashed = SubscriptionPlan::onlyTrashed();
             if (!$trashed->exists()) {
-                throw new RuntimeException("No trashed plans to force delete.");
+                throw new BusinessRuleException("No trashed plans to force delete.", 403);
             }
             $trashed->forceDelete();
             $this->flushCache();
@@ -225,7 +224,7 @@ class SubscriptionPlanService
     public function viewTrashedPlan(SubscriptionPlan $subscriptionPlan): SubscriptionPlan
     {
         if (!$subscriptionPlan->trashed()) {
-            throw new RuntimeException('The Plan Not Trashed Yeat !');
+            throw new BusinessRuleException('The Plan Not Trashed Yeat !', 403);
         }
 
         return $subscriptionPlan;

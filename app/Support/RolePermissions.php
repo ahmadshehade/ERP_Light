@@ -4,7 +4,6 @@ namespace App\Support;
 
 use App\Enums\NameOfRoles;
 use App\Enums\PermissionManagementPermissions;
-use App\Enums\TenantPermission;
 
 class RolePermissions
 {
@@ -71,6 +70,7 @@ class RolePermissions
                 PermissionManagementPermissions::ReNewSubscriptions->value,
 
                 //Payments
+                PermissionManagementPermissions::ViewAnyPayments->value,
                 PermissionManagementPermissions::ViewPayments->value,
                 PermissionManagementPermissions::CreatePayments->value,
                 PermissionManagementPermissions::CancelPayments->value,

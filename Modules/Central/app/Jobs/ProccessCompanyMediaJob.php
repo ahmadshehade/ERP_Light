@@ -18,7 +18,7 @@ class ProccessCompanyMediaJob implements ShouldQueue
     /**
      * Create a new job instance.
      */
-    public function __construct(public int $companyId, public string $path) {}
+    public function __construct(public int $companyId, public ?string $path) {}
 
     /**
      * Execute the job.

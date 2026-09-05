@@ -11,7 +11,7 @@ use Modules\Central\Models\Subscription;
 use Modules\Central\Notifications\Api\V1\Subscriptions\RenewSubscriptionNotification;
 use Modules\Central\Notifications\Api\V1\Subscriptions\SubscriptionRenewedNotification;
 use Modules\Central\Notifications\Api\V1\Subscriptions\UpdateSubscriptionNotification;
-use RuntimeException;
+use App\Exceptions\BusinessRuleException;
 
 class SubscriptionNotificationService
 {
@@ -109,8 +109,9 @@ class SubscriptionNotificationService
                     'subscription_id' => $subscription->id,
                 ]
             );
-            throw new RuntimeException(
-                ' Cannot send renewal notification: incomplete subscription data'
+            throw new BusinessRuleException(
+                ' Cannot send renewal notification: incomplete subscription data',
+                403
             );
         }
 

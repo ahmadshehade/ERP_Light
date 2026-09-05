@@ -2,7 +2,8 @@
 
 namespace Database\Seeders;
 
-
+use App\Enums\PermissionManagementPermissions;
+use App\Support\RolePermissions;
 use Illuminate\Database\Seeder;
 use Modules\Tenant\Support\TenantPermissionManagement;
 use Spatie\Permission\Models\Permission;
@@ -15,7 +16,7 @@ class RolePermissionSeeder extends Seeder
      */
     public function run(): void
     {
-        foreach (TenantPermissionManagement::get() as $role => $permissions) {
+        foreach (RolePermissions::get() as $role => $permissions) {
             $role = Role::findByName($role);
 
             if ($permissions === ['*']) {

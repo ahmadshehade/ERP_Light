@@ -13,7 +13,7 @@ class PaymentPolicy extends BasePolicy
     use HandlesAuthorization;
 
     /**
-     *
+     *Summary of viewAny
      */
     public function viewAny(User $user)
     {
@@ -26,7 +26,7 @@ class PaymentPolicy extends BasePolicy
     public function view(User $user, Payment $payment): bool
     {
         return $user->can(PermissionManagementPermissions::ViewPayments->value)
-            && $payment->subscription->company->owner_id = $user->id;
+            && $payment->subscription->company->owner_id == $user->id;
     }
 
     /**

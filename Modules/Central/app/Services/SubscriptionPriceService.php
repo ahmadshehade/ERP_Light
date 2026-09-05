@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Modules\Central\Models\SubscriptionPlan;
 use Modules\Central\Models\SubscriptionPrice;
 use Modules\Central\Services\SubscriptionPrices\SubscriptionPriceNotification;
-use RuntimeException;
+use App\Exceptions\BusinessRuleException;
 
 class SubscriptionPriceService
 {
@@ -134,16 +134,18 @@ class SubscriptionPriceService
                     || $newHasTrial != $subscriptionPrice->has_trial
                     || $newTrialDays != $subscriptionPrice->trial_days;
                 if ($changingPriceData) {
-                    throw new RuntimeException(
-                        'Cannot modify subscription price because it is used by active or pending subscriptions.'
+                    throw new BusinessRuleException(
+                        'Cannot modify subscription price because it is used by active or pending subscriptions.',
+                        409
                     );
                 }
                 if (
                     $newIsActive === true &&
                     !$subscriptionPrice->is_active
                 ) {
-                    throw new RuntimeException(
-                        'Cannot activate this price while it is associated with active or pending subscriptions.'
+                    throw new BusinessRuleException(
+                        'Cannot activate this price while it is associated with active or pending subscriptions.',
+                        409
                     );
                 }
             }
@@ -155,8 +157,9 @@ class SubscriptionPriceService
                     ->where('id', '!=', $subscriptionPrice->id)
                     ->exists();
                 if ($anotherActivePriceExists) {
-                    throw new RuntimeException(
-                        'This subscription plan already has an active price.'
+                    throw new BusinessRuleException(
+                        'This subscription plan already has an active price.',
+                        409
                     );
                 }
             }
@@ -194,8 +197,9 @@ class SubscriptionPriceService
     {
         return DB::transaction(function () use ($subscriptionPrice) {
             if ($subscriptionPrice->trashed()) {
-                throw new RuntimeException(
-                    'Subscription price is already deleted.'
+                throw new BusinessRuleException(
+                    'Subscription price is already deleted.',
+                    409
                 );
             }
             $hasSubscriptions = $subscriptionPrice
@@ -206,8 +210,9 @@ class SubscriptionPriceService
                 ])
                 ->exists();
             if ($hasSubscriptions) {
-                throw new RuntimeException(
-                    'Cannot delete subscription price because it is used by active or pending subscriptions. Deactivate it instead.'
+                throw new BusinessRuleException(
+                    'Cannot delete subscription price because it is used by active or pending subscriptions. Deactivate it instead.',
+                    409
                 );
             }
             $subscriptionPrice->delete();
@@ -229,8 +234,9 @@ class SubscriptionPriceService
     ): SubscriptionPrice {
         return DB::transaction(function () use ($subscriptionPrice) {
             if (!$subscriptionPrice->trashed()) {
-                throw new RuntimeException(
-                    'Subscription Price is not trashed.'
+                throw new BusinessRuleException(
+                    'Subscription Price is not trashed.',
+                    404
                 );
             }
             $activePriceExists = SubscriptionPrice::query()
@@ -238,12 +244,16 @@ class SubscriptionPriceService
                 ->where('is_active', true)
                 ->exists();
             if ($activePriceExists) {
-                throw new RuntimeException(
-                    'Cannot restore this price because the subscription plan already has an active price.'
+                throw new BusinessRuleException(
+                    'Cannot restore this price because the subscription plan already has an active price.',
+                    409
                 );
             }
             $subscriptionPrice->restore();
-            $this->cacheFlush();
+            DB::afterCommit(function () {
+                $this->cacheFlush();
+            });
+
             return $subscriptionPrice->load(['plan']);
         }, 5);
     }
@@ -257,15 +267,18 @@ class SubscriptionPriceService
     {
         return DB::transaction(function () use ($subscriptionPrice) {
             if (!$subscriptionPrice->trashed()) {
-                throw new RuntimeException('Subscription Price is not trashed and cannot be force deleted.');
+                throw new BusinessRuleException('Subscription Price is not trashed and cannot be force deleted.', 404);
             }
             if ($subscriptionPrice->subscriptions()->exists()) {
-                throw new RuntimeException(
-                    'Cannot delete subscription price used by subscriptions.'
+                throw new BusinessRuleException(
+                    'Cannot delete subscription price used by subscriptions.',
+                    409
                 );
             }
             $subscriptionPrice->forceDelete();
-            $this->cacheFlush();
+            DB::afterCommit(function () {
+                $this->cacheFlush();
+            });
             return true;
         }, 5);
     }
@@ -279,8 +292,9 @@ class SubscriptionPriceService
         return DB::transaction(function () {
             $prices = SubscriptionPrice::onlyTrashed()->get();
             if ($prices->isEmpty()) {
-                throw new RuntimeException(
-                    'No trashed subscription prices to restore.'
+                throw new BusinessRuleException(
+                    'No trashed subscription prices to restore.',
+                    404
                 );
             }
             foreach ($prices as $price) {
@@ -290,8 +304,9 @@ class SubscriptionPriceService
                         ->where('is_active', true)
                         ->exists();
                     if ($activePriceExists) {
-                        throw new RuntimeException(
-                            "Cannot restore subscription price {$price->id} because its plan already has an active price."
+                        throw new BusinessRuleException(
+                            "Cannot restore subscription price {$price->id} because its plan already has an active price.",
+                            409
                         );
                     }
                 }
@@ -316,8 +331,9 @@ class SubscriptionPriceService
                 ->withCount('subscriptions')
                 ->get();
             if ($prices->isEmpty()) {
-                throw new RuntimeException(
-                    'No trashed subscription prices to force delete.'
+                throw new BusinessRuleException(
+                    'No trashed subscription prices to force delete.',
+                    404
                 );
             }
             $usedPrices = $prices->filter(
@@ -325,8 +341,9 @@ class SubscriptionPriceService
                 $price->subscriptions_count > 0
             );
             if ($usedPrices->isNotEmpty()) {
-                throw new RuntimeException(
-                    'Some trashed subscription prices are used by subscriptions and cannot be force deleted.'
+                throw new BusinessRuleException(
+                    'Some trashed subscription prices are used by subscriptions and cannot be force deleted.',
+                    409
                 );
             }
             SubscriptionPrice::onlyTrashed()->forceDelete();
@@ -363,7 +380,7 @@ class SubscriptionPriceService
     public function getTrashedSubscriptionPrice(SubscriptionPrice $subscriptionPrice): SubscriptionPrice
     {
         if (!$subscriptionPrice->trashed()) {
-            throw new RuntimeException('Subscription Price is not trashed');
+            throw new BusinessRuleException('Subscription Price is not trashed', 409);
         }
         return $subscriptionPrice->load(['plan']);
     }

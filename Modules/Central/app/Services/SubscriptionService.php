@@ -3,19 +3,19 @@
 namespace Modules\Central\Services;
 
 use App\Enums\NameOfCache;
-use App\Enums\NameOfRoles;
+
 use App\Enums\PaymentStatus;
 use App\Enums\SubscriptionStatus;
-use App\Models\User;
+
 use App\Traits\ApplyFilters;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Notification;
+
 use Modules\Central\Models\Subscription;
 use Modules\Central\Models\SubscriptionPrice;
 use Modules\Central\Services\Payments\PaymentService;
-use RuntimeException;
+use App\Exceptions\BusinessRuleException;
 use Modules\Central\Services\Payments\StripePaymentService;
 use Modules\Central\Services\Subscriptions\SubscriptionNotificationService;
 use Illuminate\Support\Facades\Log;
@@ -66,8 +66,7 @@ class SubscriptionService
         return Cache::tags(NameOfCache::SUBSCRIPTION->value)
             ->remember($cacheKey, 60, function () use ($data) {
 
-                $query = Subscription::query()
-                    ->userSubscriptions(Auth::user())
+                $query = Subscription::userSubscriptions(Auth::user())
                     ->with([
                         'company.owner',
                         'price'
@@ -104,8 +103,9 @@ class SubscriptionService
                 ])
                 ->exists();
             if ($exists) {
-                throw new RuntimeException(
-                    'Company already has a subscription.'
+                throw new BusinessRuleException(
+                    'Company already has a subscription.',
+                    409
                 );
             }
             $price = SubscriptionPrice::query()
@@ -157,8 +157,9 @@ class SubscriptionService
                 $subscription->status !== SubscriptionStatus::PENDING &&
                 (isset($data['company_id']) || isset($data['price_id']))
             ) {
-                throw new RuntimeException(
-                    'Cannot change company or price because status is not pending. Current status: ' . $subscription->status->value
+                throw new BusinessRuleException(
+                    'Cannot change company or price because status is not pending. Current status: ' . $subscription->status->value,
+                    409
                 );
             }
             $oldPriceId = $subscription->price_id;
@@ -300,8 +301,9 @@ class SubscriptionService
     {
         return DB::transaction(function () use ($subscription) {
             if (!$subscription->trashed()) {
-                throw new RuntimeException(
-                    'Subscription is not trashed.'
+                throw new BusinessRuleException(
+                    'Subscription is not trashed.',
+                    404
                 );
             }
             $subscription->restore();
@@ -320,8 +322,9 @@ class SubscriptionService
     {
         return DB::transaction(function () use ($subscription) {
             if (!$subscription->trashed()) {
-                throw new RuntimeException(
-                    'Subscription must be trashed first.'
+                throw new BusinessRuleException(
+                    'Subscription must be trashed first.',
+                    404
                 );
             }
             $subscription->forceDelete();
@@ -357,8 +360,9 @@ class SubscriptionService
     {
 
         if (!$subscription->trashed()) {
-            throw new RuntimeException(
-                'Subscription is not trashed.'
+            throw new BusinessRuleException(
+                'Subscription is not trashed.',
+                404
             );
         }
         return $subscription->load([
@@ -377,8 +381,9 @@ class SubscriptionService
                 ->userSubscriptions(Auth::user())
                 ->get();
             if ($subscriptions->isEmpty()) {
-                throw new RuntimeException(
-                    'No trashed subscriptions found.'
+                throw new BusinessRuleException(
+                    'No trashed subscriptions found.',
+                    404
                 );
             }
             foreach ($subscriptions as $subscription) {
@@ -399,8 +404,9 @@ class SubscriptionService
             ->userSubscriptions(Auth::user());
         if (!$query->exists()) {
 
-            throw new RuntimeException(
-                'No trashed subscriptions found.'
+            throw new BusinessRuleException(
+                'No trashed subscriptions found.',
+                404
             );
         }
         $query->forceDelete();
@@ -432,8 +438,9 @@ class SubscriptionService
             ]);
 
             if (!$newSubscription->price) {
-                throw new RuntimeException(
-                    'Renewed subscription price not found.'
+                throw new BusinessRuleException(
+                    'Renewed subscription price not found.',
+                    404
                 );
             }
 

@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Modules\Central\Models\Payment;
 use Modules\Central\Models\Subscription;
-use RuntimeException;
+use App\Exceptions\BusinessRuleException;
 
 class PaymentService
 {
@@ -83,8 +83,9 @@ class PaymentService
                 ->exists();
 
             if ($exists) {
-                throw new RuntimeException(
-                    'Subscription already has a pending payment.'
+                throw new BusinessRuleException(
+                    'Subscription already has a pending payment.',
+                    409
                 );
             }
             $payment = Payment::create($data);
@@ -103,15 +104,7 @@ class PaymentService
     public function update(Payment $payment, array $data): Payment
     {
         return DB::transaction(function () use ($payment, $data) {
-
             $payment->update([
-                'amount' => $data['amount'] ?? $payment->amount,
-                'currency' => $data['currency'] ?? $payment->currency,
-                'payment_method' => $data['payment_method'] ?? $payment->payment_method,
-                'status' => $data['status'] ?? $payment->status,
-                'paid_at' => $data['paid_at'] ?? $payment->paid_at,
-                'gateway' => $data['gateway'] ?? $payment->gateway,
-                'transaction_id' => $data['transaction_id'] ?? $payment->transaction_id,
                 'metadata' => $data['metadata'] ?? $payment->metadata,
             ]);
 
@@ -119,7 +112,7 @@ class PaymentService
                 $this->flushCache();
             });
 
-            return $payment->load('subscription.company.owner');
+            return $payment->fresh()->load('subscription.company.owner');
         });
     }
 
@@ -148,8 +141,9 @@ class PaymentService
     {
         return DB::transaction(function () use ($payment) {
             if (!$payment->trashed()) {
-                throw new RuntimeException(
-                    'Payment is not trashed.'
+                throw new BusinessRuleException(
+                    'Payment is not trashed.',
+                    404
                 );
             }
             $payment->restore();
@@ -169,7 +163,7 @@ class PaymentService
     {
         return DB::transaction(function () use ($payment) {
             if (!$payment->trashed()) {
-                throw new RuntimeException('Payment is not trashed');
+                throw new BusinessRuleException('Payment is not trashed', 404);
             }
             $payment->forceDelete();
             DB::afterCommit(function () {
@@ -188,7 +182,7 @@ class PaymentService
         return DB::transaction(function () {
             $payments = Payment::onlyTrashed()->get();
             if ($payments->isEmpty()) {
-                throw new RuntimeException('No trashed payments found');
+                throw new BusinessRuleException('No trashed payments found', 404);
             }
             foreach ($payments as $payment) {
                 $payment->restore();
@@ -203,14 +197,14 @@ class PaymentService
     /**
      * Force delete all payments
      * @return bool
-     * @throws RuntimeException
+     * @throws BusinessRuleException
      */
     public function forceDeleteAll(): bool
     {
         return DB::transaction(function () {
             $payments = Payment::onlyTrashed()->get();
             if ($payments->isEmpty()) {
-                throw new RuntimeException('No trashed payments found');
+                throw new BusinessRuleException('No trashed payments found', 404);
             }
             foreach ($payments as $payment) {
                 $payment->forceDelete();
@@ -248,7 +242,7 @@ class PaymentService
     public function getTrashed(Payment $payment): Payment
     {
         if (!$payment->trashed()) {
-            throw new RuntimeException('Payment is not trashed');
+            throw new BusinessRuleException('Payment is not trashed', 404);
         }
         return $payment->load('subscription.company.owner');
     }

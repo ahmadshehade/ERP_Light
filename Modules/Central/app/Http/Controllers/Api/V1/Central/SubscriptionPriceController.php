@@ -33,7 +33,7 @@ class SubscriptionPriceController extends Controller
     {
         $this->authorize('create', SubscriptionPrice::class);
         $price = $this->service->store($request->validated());
-        return $this->successMessage('Successfully Created Subscription Price', ['price' => $price], 200);
+        return $this->successMessage('Successfully Created Subscription Price', ['price' => $price], 201);
     }
 
     /**

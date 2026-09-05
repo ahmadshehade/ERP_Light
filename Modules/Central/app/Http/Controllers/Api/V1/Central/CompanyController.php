@@ -86,7 +86,7 @@ class CompanyController extends Controller
     {
         $this->authorize('forceDelete', $company);
         $this->companyService->forceDeleteTrashedCompany($company);
-        return $this->successMessage('Successfully force deleted company', [], 200);
+        return $this->successMessage('Successfully force deleted company', [], 202);
     }
 
     /**
@@ -122,7 +122,7 @@ class CompanyController extends Controller
     {
         $this->authorize('forceDeleteAny', Company::class);
         $this->companyService->forceDeleteAllTrashedCompanies();
-        return $this->successMessage('Successfully force deleted all trashed companies', [], 200);
+        return $this->successMessage('Successfully force deleted all trashed companies', [], 202);
     }
 
     /**

@@ -2,7 +2,7 @@
 
 namespace Modules\Central\Http\Requests\Api\V1\Central\Company;
 
-
+use App\Enums\NameOfRoles;
 use App\Http\Requests\BaseRequest;
 
 use Illuminate\Validation\Rule;
@@ -42,7 +42,7 @@ class UpdateCompanyRequest extends BaseRequest
     {
         $company = $this->route('company');
 
-        return [
+        $rules = [
             'name' => ['array'],
 
             'name.en' => [
@@ -78,6 +78,11 @@ class UpdateCompanyRequest extends BaseRequest
 
 
         ];
+        $user = $this->user();
+        if ($user->hasRole(NameOfRoles::SuperAdmin->value)) {
+            $rules['is_active'] = ['sometimes', 'boolean'];
+        }
+        return $rules;
     }
 
     /**
@@ -120,6 +125,8 @@ class UpdateCompanyRequest extends BaseRequest
 
             'subdomain.regex' => 'The :attributes may only contain lowercase letters, numbers, and hyphens, and must not start or end with a hyphen.',
 
+            'is_active.boolean' => 'The :attributes field must be a boolean.',
+
 
         ];
     }
@@ -136,6 +143,7 @@ class UpdateCompanyRequest extends BaseRequest
             'max_users' => 'Maximum Number of Users',
             'is_active' => 'Status',
             'regex' => 'Regex',
+            'is_active' => 'Status',
 
         ];
     }

@@ -183,6 +183,7 @@ class PaymentController extends Controller
      */
     public function fail(Payment $payment, Request $request)
     {
+
         $reason = $request->input('reason');
         $fail = $this->lifeSycle->fail($payment, $reason);
         return $this->successMessage('Successfully fail payment', ['payment' => $fail], 200);

@@ -26,7 +26,8 @@ class CompanyPolicy extends BasePolicy
      */
     public function view(User $user, Company $company): bool
     {
-        return $user->can(PermissionManagementPermissions::ViewCompanies->value) && $user->id === $company->owner_id;
+        return $user->can(PermissionManagementPermissions::ViewCompanies->value)
+            || $user->id === $company->owner_id;
     }
 
     /**
@@ -70,8 +71,7 @@ class CompanyPolicy extends BasePolicy
     public function restore(User $user, Company $company): bool
     {
 
-        return $user->can(PermissionManagementPermissions::RestoreCompanies->value)
-            || $user->id === $company->owner_id;
+        return $user->can(PermissionManagementPermissions::RestoreCompanies->value);
     }
 
     /**
@@ -81,8 +81,7 @@ class CompanyPolicy extends BasePolicy
      */
     public function forceDelete(User $user, Company $company): bool
     {
-        return $user->can(PermissionManagementPermissions::ForceDeleteCompanies->value)
-            || $user->id === $company->owner_id;
+        return $user->can(PermissionManagementPermissions::ForceDeleteCompanies->value);
     }
 
     /**

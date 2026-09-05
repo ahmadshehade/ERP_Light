@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\DB;
 use Modules\Central\Models\Company;
 use Modules\Central\Models\Subscription;
 use Modules\Central\Models\SubscriptionPrice;
-use RuntimeException;
+use App\Exceptions\BusinessRuleException;
 
 class SubscriptionLifecycleService
 {
@@ -85,8 +85,9 @@ class SubscriptionLifecycleService
             $oldStatus === SubscriptionStatus::ACTIVE &&
             $newStatus === SubscriptionStatus::PENDING
         ) {
-            throw new RuntimeException(
-                'Cannot return active subscription to pending.'
+            throw new BusinessRuleException(
+                'Cannot return active subscription to pending.',
+                403
             );
         }
 
@@ -97,8 +98,9 @@ class SubscriptionLifecycleService
             $oldStatus === SubscriptionStatus::CANCELED &&
             $newStatus === SubscriptionStatus::ACTIVE
         ) {
-            throw new RuntimeException(
-                'Cannot activate canceled subscription.'
+            throw new BusinessRuleException(
+                'Cannot activate canceled subscription.',
+                403
             );
         }
 
@@ -109,8 +111,9 @@ class SubscriptionLifecycleService
             $oldStatus === SubscriptionStatus::TRAIL_EXPIRED &&
             $newStatus === SubscriptionStatus::ACTIVE
         ) {
-            throw new RuntimeException(
-                'Trial expired subscription cannot be activated. Create a new subscription.'
+            throw new BusinessRuleException(
+                'Trial expired subscription cannot be activated. Create a new subscription.',
+                403
             );
         }
 
@@ -141,8 +144,9 @@ class SubscriptionLifecycleService
          */
         if ($newStatus === SubscriptionStatus::ACTIVE) {
             if ($oldStatus !== SubscriptionStatus::PENDING) {
-                throw new RuntimeException(
-                    'Only pending subscriptions can be activated.'
+                throw new BusinessRuleException(
+                    'Only pending subscriptions can be activated.',
+                    403
                 );
             }
 
@@ -241,8 +245,9 @@ class SubscriptionLifecycleService
                     true
                 )
             ) {
-                throw new RuntimeException(
-                    'Only active or expired subscriptions can be renewed.'
+                throw new BusinessRuleException(
+                    'Only active or expired subscriptions can be renewed.',
+                    403
                 );
             }
             $exists = Subscription::query()
@@ -254,8 +259,9 @@ class SubscriptionLifecycleService
                 ->exists();
 
             if ($exists) {
-                throw new RuntimeException(
-                    'Company already has a pending subscription.'
+                throw new BusinessRuleException(
+                    'Company already has a pending subscription.',
+                    403
                 );
             }
 

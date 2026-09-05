@@ -4,7 +4,7 @@ namespace Modules\Central\Services\Payments;
 
 use Illuminate\Support\Facades\Log;
 use Modules\Central\Models\Payment;
-use RuntimeException;
+use App\Exceptions\BusinessRuleException;
 use Stripe\StripeClient;
 
 class StripePaymentService
@@ -74,7 +74,6 @@ class StripePaymentService
                 . '/payments/cancel',
         ]);
 
-        // حفظ Stripe Checkout Session ID
         $payment->update([
             'checkout_session_id' => $session->id,
         ]);
@@ -99,8 +98,9 @@ class StripePaymentService
     public function expireCheckoutSession(Payment $payment): void
     {
         if (!$payment->checkout_session_id) {
-            throw new RuntimeException(
-                'Stripe Checkout Session ID not found.'
+            throw new BusinessRuleException(
+                'Stripe Checkout Session ID not found.',
+                404
             );
         }
 
@@ -131,8 +131,9 @@ class StripePaymentService
              * so we must not silently mark it as canceled.
              */
             if ($session->status === 'complete') {
-                throw new RuntimeException(
-                    'Cannot expire a completed Stripe Checkout Session.'
+                throw new BusinessRuleException(
+                    'Cannot expire a completed Stripe Checkout Session.',
+                    422
                 );
             }
 
@@ -149,7 +150,7 @@ class StripePaymentService
                 'checkout_session_id' => $expiredSession->id,
                 'status' => $expiredSession->status,
             ]);
-        } catch (\Exception $e) {
+        } catch (BusinessRuleException $e) {
 
             Log::error(
                 'Could not expire Stripe Checkout Session.',
@@ -173,8 +174,9 @@ class StripePaymentService
     public function refundPayment(Payment $payment): array
     {
         if (!$payment->transaction_id) {
-            throw new RuntimeException(
-                'Stripe transaction ID not found.'
+            throw new BusinessRuleException(
+                'Stripe transaction ID not found.',
+                404
             );
         }
 
@@ -196,8 +198,9 @@ class StripePaymentService
     public function cancelPayment(Payment $payment): array
     {
         if (!$payment->transaction_id) {
-            throw new RuntimeException(
-                'Stripe transaction ID not found.'
+            throw new BusinessRuleException(
+                'Stripe transaction ID not found.',
+                404
             );
         }
 
@@ -215,9 +218,10 @@ class StripePaymentService
          * It must be refunded instead.
          */
         if ($paymentIntent->status === 'succeeded') {
-            throw new RuntimeException(
+            throw new BusinessRuleException(
                 'Cannot cancel a payment that has already succeeded. ' .
-                    'Use refundPayment() instead.'
+                    'Use refundPayment() instead.',
+                422
             );
         }
 

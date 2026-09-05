@@ -88,7 +88,7 @@ Route::middleware(['auth:sanctum'])->prefix('v1/central')->group(function () {
         Route::get('/', [CompanyController::class, 'index']);
         Route::get('/{company}', [CompanyController::class, 'show']);
         Route::post('/', [CompanyController::class, 'store']);
-        Route::post('/{company}', [CompanyController::class, 'update']);
+        Route::patch('/{company}', [CompanyController::class, 'update']);
         Route::delete('/{company}', [CompanyController::class, 'destroy']);
     });
 

@@ -4,7 +4,6 @@ namespace Modules\Central\Http\Controllers\Api\V1\Central;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use Illuminate\Http\Client\HttpClientException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Modules\Central\Services\SubscriptionService;
@@ -74,7 +73,7 @@ class SubscriptionController extends Controller
     {
         $this->authorize('restore', $subscription);
         $data = $this->subscriptionService->restore($subscription);
-        return $this->successMessage('Successfully Restored Subscription', [], 200);
+        return $this->successMessage('Successfully Restored Subscription', ['subscription' => $data], 200);
     }
     /**
      * Remove the specified resource from storage.
@@ -84,13 +83,13 @@ class SubscriptionController extends Controller
     public  function forceDelete(Subscription $subscription): JsonResponse
     {
         $this->authorize('forceDelete', $subscription);
-        $data = $this->subscriptionService->forceDelete($subscription);
+        $this->subscriptionService->forceDelete($subscription);
         return $this->successMessage('Successfully Deleted Subscription', [], 200);
     }
     /**
      * Display a listing of the trashed resource.
      * @return JsonResponse
-     * @throws HttpClientException
+     *
      */
     public function getTrashedSubscriptions(Request $request): JsonResponse
     {

@@ -2,8 +2,6 @@
 
 namespace Modules\Central\Services\Payments;
 
-use App\Enums\NameOfRoles;
-use App\Models\User;
 use Illuminate\Support\Facades\Notification;
 use Modules\Central\Models\Subscription;
 use Modules\Central\Notifications\Api\V1\CancelPaymentNotification;

@@ -62,12 +62,15 @@ class Subscription extends Model
      */
     public  function scopeUserSubscriptions(Builder $query, User $user): Builder
     {
-        if ($user->hasRole(NameOfRoles::SuperAdmin->value)) {
+        if ($user->hasRole(NameOfRoles::SuperAdmin)) {
             return $query;
         }
-        return $query->whereHas('company', function ($q) use ($user) {
-            $q->where('owner_id', $user->id);
-        });
+        if ($user->hasRole(NameOfRoles::Owner)) {
+            return $query->whereHas('company', function ($q) use ($user) {
+                return $q->where('owner_id', $user->id);
+            });
+        }
+        return $query->whereRaw("1=0");
     }
 
     /**
