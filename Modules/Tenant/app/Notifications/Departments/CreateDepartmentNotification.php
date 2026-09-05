@@ -6,7 +6,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
-use phpDocumentor\Reflection\Types\Self_;
+
 
 class CreateDepartmentNotification extends Notification implements ShouldQueue
 {
@@ -23,7 +23,7 @@ class CreateDepartmentNotification extends Notification implements ShouldQueue
         public string $name_ar,
         public string $description_ar,
         public string $description_en,
-        public bool $is_active
+        public ?bool $is_active
     ) {}
 
     /**

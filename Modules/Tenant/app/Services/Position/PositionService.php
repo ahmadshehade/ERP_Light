@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Modules\Tenant\Models\Position;
-use RuntimeException;
+use App\Exceptions\BusinessRuleException;
 
 class PositionService
 {
@@ -98,7 +98,7 @@ class PositionService
                 ->lockForUpdate()
                 ->first();
             if (!$position) {
-                throw new RuntimeException('Position Not Found.');
+                throw new BusinessRuleException('Position Not Found.', 404);
             }
             $position->update($data);
             DB::connection('tenant')->afterCommit(function () use ($position) {
@@ -147,7 +147,7 @@ class PositionService
     {
         return DB::connection('tenant')->transaction(function () use ($position) {
             if (!$position->trashed()) {
-                throw  new RuntimeException('Position is not trashed');
+                throw  new BusinessRuleException('Position is not trashed', 404);
             }
             $position->restore();
             DB::connection('tenant')->afterCommit(function () use ($position) {
@@ -167,7 +167,7 @@ class PositionService
     {
         return DB::connection('tenant')->transaction(function () use ($position) {
             if (!$position->trashed()) {
-                throw  new RuntimeException('Position is not trashed');
+                throw  new BusinessRuleException('Position is not trashed', 404);
             }
             $position->forceDelete();
             DB::connection('tenant')->afterCommit(function () {
@@ -185,7 +185,7 @@ class PositionService
     public function getTrashedPositon(Position $position): Position
     {
         if (!$position->trashed()) {
-            throw new RuntimeException('Position is not trashed');
+            throw new BusinessRuleException('Position is not trashed', 404);
         }
         return $position;
     }
@@ -218,7 +218,7 @@ class PositionService
         return DB::connection('tenant')->transaction(function () {
             $count = Position::onlyTrashed()->restore();
             if ($count == 0) {
-                throw new RuntimeException("No trashed positions to restore.");
+                throw new BusinessRuleException("No trashed positions to restore.", 404);
             }
             DB::connection('tenant')->afterCommit(function () {
                 $this->fulshCahe();
@@ -244,7 +244,7 @@ class PositionService
                     }
                 });
             if ($count == 0) {
-                throw new RuntimeException('');
+                throw new BusinessRuleException('No trashed positions to delete.', 404);
             }
             DB::connection('tenant')->afterCommit(function () {
                 $this->fulshCahe();

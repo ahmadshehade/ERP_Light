@@ -7,7 +7,6 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -16,6 +15,9 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Modules\Central\Models\Company;
 use Modules\Tenant\Models\TenantUser;
+use Spatie\Activitylog\LogOptions;
+use Override;
+use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Permission\Traits\HasRoles;
 
 #[Fillable(['name', 'email', 'password',])]
@@ -23,7 +25,7 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable, HasApiTokens, HasRoles, SoftDeletes;
+    use HasFactory, Notifiable, HasApiTokens, HasRoles, SoftDeletes, LogsActivity;
 
     protected $connection = 'mysql';
     /**
@@ -70,5 +72,14 @@ class User extends Authenticatable
             TenantUser::class,
             'user_id'
         );
+    }
+
+    /**
+     * Get the options for generating the activity log.
+     */
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()->logAll()->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
     }
 }

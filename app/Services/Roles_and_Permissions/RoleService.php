@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Traits\ApplyFilters;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use RuntimeException;
 use Spatie\Permission\Models\Role;
 
 class RoleService
@@ -59,10 +60,15 @@ class RoleService
      */
     public function assignRoleToUser(User $user, Role $role): bool
     {
-
         $user->assignRole($role);
-
         $this->clearCache();
+        activity()
+            ->causedBy($this->authenticatedUser())
+            ->withProperties([
+                'role' => $role->name,
+                'user' => $user->id,
+            ])
+            ->log('Role assigned to user');
 
         return true;
     }
@@ -73,9 +79,14 @@ class RoleService
     public function removeRoleFromUser(User $user, Role $role): bool
     {
         $user->removeRole($role);
-
         $this->clearCache();
-
+        activity()
+            ->causedBy($this->authenticatedUser())
+            ->withProperties([
+                'role' => $role->name,
+                'user' => $user->id,
+            ])
+            ->log('Role removed from user');
         return true;
     }
 
@@ -90,6 +101,14 @@ class RoleService
         }
         $user->syncRoles($roles);
         $this->clearCache();
+        activity()
+            ->causedBy($this->authenticatedUser())
+            ->withProperties([
+                'roles' => $roles->all(),
+                'user' => $user->id,
+            ])
+            ->log('Roles synced for user');
+
         return true;
     }
     /**
@@ -105,5 +124,19 @@ class RoleService
     private function clearCache()
     {
         Cache::tags([NameOfCache::ROLE->value])->flush();
+    }
+
+    /**
+     * Get the authenticated user
+     */
+    private function authenticatedUser(): User
+    {
+        $user = Auth::user();
+
+        if (!$user instanceof User) {
+            throw new RuntimeException('Authenticated user not found.');
+        }
+
+        return $user;
     }
 }

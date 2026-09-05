@@ -67,6 +67,12 @@ class PermissionService
         $permission->syncRoles($roles);
 
         $this->clearCache();
+        activity()
+            ->performedOn($permission)
+            ->withProperties([
+                'roles' => $roles,
+            ])
+            ->log('Permission roles synced');
 
         return $permission->load('roles');
     }
@@ -77,8 +83,14 @@ class PermissionService
     public function giveToUser(Permission $permission, TenantUser $user)
     {
         $user->givePermissionTo($permission);
-
         $this->clearCache();
+        activity()
+            ->performedOn($user)
+            ->withProperties([
+                'permission' => $permission->name,
+                'permission_id' => $permission->id,
+            ])
+            ->log('Permission granted to user');
 
         return true;
     }
@@ -89,8 +101,14 @@ class PermissionService
     public function revokeFromUser(Permission $permission, TenantUser $user)
     {
         $user->revokePermissionTo($permission);
-
         $this->clearCache();
+        activity()
+            ->performedOn($user)
+            ->withProperties([
+                'permission' => $permission->name,
+                'permission_id' => $permission->id,
+            ])
+            ->log('Permission revoked from user');
 
         return true;
     }

@@ -18,12 +18,14 @@ use Spatie\Translatable\HasTranslations;
 use Illuminate\Support\Str;
 use Modules\Tenant\Enum\TenantPermission;
 use Modules\Tenant\Enum\TenantRoles;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 // use Modules\Tenant\Database\Factories\ProjectFactory;
 
 class Project extends Model implements HasMedia
 {
-    use HasFactory, SoftDeletes, InteractsWithMedia, HasTranslations;
+    use HasFactory, SoftDeletes, InteractsWithMedia, HasTranslations, LogsActivity;
 
     protected $table = 'projects';
 
@@ -56,6 +58,18 @@ class Project extends Model implements HasMedia
         'start_date',
         'end_date'
     ];
+
+
+    /**
+     * Get the options for generating the activity log.
+     */
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logAll()
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
+    }
 
 
     /**

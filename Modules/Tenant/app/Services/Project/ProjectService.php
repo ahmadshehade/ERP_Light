@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Modules\Tenant\Jobs\ProcessProjectMediaJob;
 use Modules\Tenant\Models\Project;
-use RuntimeException;
+use App\Exceptions\BusinessRuleException;
 use Illuminate\Support\Arr;
 use Modules\Tenant\Enum\ProjectStatus;
 use Modules\Tenant\Enum\TaskStatus;
@@ -136,7 +136,7 @@ class ProjectService
                 ->lockForUpdate()
                 ->first();
             if (!$project) {
-                throw new RuntimeException('Project Not Found.');
+                throw new BusinessRuleException('Project Not Found.', 404);
             }
             $media = Arr::pull($data, 'media', []);
             $teamIds = Arr::pull($data, 'teamIds', []);
@@ -210,7 +210,7 @@ class ProjectService
             ])->exists();
 
             if ($hasActiveTasks) {
-                throw new RuntimeException('Cannot delete project with active tasks.');
+                throw new BusinessRuleException('Cannot delete project with active tasks.', 409);
             }
             $project->tasks()->delete();
             $project->delete();
@@ -290,7 +290,7 @@ class ProjectService
         if ($project->trashed()) {
             return $project->load('media', 'tasks');
         }
-        throw new RuntimeException('Project is not trashed');
+        throw new BusinessRuleException('Project is not trashed', 404);
     }
 
     /**
@@ -302,7 +302,7 @@ class ProjectService
         return DB::connection('tenant')->transaction(function () {
             $count = Project::onlyTrashed()->count();
             if ($count === 0) {
-                throw new RuntimeException("No trashed projects to restore.");
+                throw new BusinessRuleException("No trashed projects to restore.");
             }
             Project::select('id')->chunkById(100, function ($projects) {
                 foreach ($projects as $project) {
@@ -331,7 +331,7 @@ class ProjectService
         return DB::connection('tenant')->transaction(function () {
             $count = Project::onlyTrashed()->count();
             if ($count === 0) {
-                throw new RuntimeException("No trashed projects to force delete.");
+                throw new BusinessRuleException("No trashed projects to force delete.", 404);
             }
             Project::select('id')->chunkById(100, function ($projects) {
                 foreach ($projects as $project) {

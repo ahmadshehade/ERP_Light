@@ -77,6 +77,7 @@ class PaymentLifeSycle
                 'paid_at' => now(),
             ]);
 
+
             $data = $this->subscriptionLifeService
                 ->prepareSubscriptionStatus(
                     [
@@ -92,11 +93,11 @@ class PaymentLifeSycle
                 NameOfRoles::Owner->value
             );
 
-            DB::afterCommit(function () use ($subscription) {
+            DB::afterCommit(function () use ($subscription, $payment) {
 
                 SubscriptionActivated::dispatch($subscription);
-
-                if ($subscription->previous_subscription_id !== null) {
+                $isRenewal = $subscription->previous_subscription_id !== null;
+                if ($isRenewal) {
 
                     $this->subscriptionNotification
                         ->renewedNotification($subscription->id);
@@ -105,6 +106,22 @@ class PaymentLifeSycle
                     $this->paymentNotificaition
                         ->successPaid($subscription->id);
                 }
+
+                activity()
+                    ->performedOn($payment)
+                    ->withProperties([
+                        'from_status' => PaymentStatus::PENDING->value,
+                        'to_status' => PaymentStatus::PAID->value,
+                        'subscription_id' => $payment->subscription_id,
+                        'is_renewal' => $isRenewal,
+                        'previous_subscription_id' =>
+                        $subscription->previous_subscription_id,
+                    ])
+                    ->log(
+                        $isRenewal
+                            ? 'Payment completed for subscription renewal'
+                            : 'Payment completed'
+                    );
             });
 
             return $payment->fresh([
@@ -151,6 +168,7 @@ class PaymentLifeSycle
                 'status' => PaymentStatus::CANCELED,
             ]);
 
+
             $data = $this->subscriptionLifeService
                 ->prepareSubscriptionStatus(
                     [
@@ -168,10 +186,18 @@ class PaymentLifeSycle
 
             $subscriptionId = $payment->subscription->id;
 
-            DB::afterCommit(function () use ($subscriptionId) {
+            DB::afterCommit(function () use ($subscriptionId, $payment) {
 
                 $this->paymentNotificaition
                     ->cancelPayment($subscriptionId);
+                activity()
+                    ->performedOn($payment)
+                    ->withProperties([
+                        'from_status' => PaymentStatus::PENDING->value,
+                        'to_status' => PaymentStatus::CANCELED->value,
+                        'subscription_id' => $payment->subscription_id,
+                    ])
+                    ->log('Payment canceled');
             });
 
             return $payment;
@@ -241,7 +267,8 @@ class PaymentLifeSycle
 
             DB::afterCommit(function () use (
                 $subscriptionId,
-                $checkoutUrl
+                $checkoutUrl,
+                $payment
             ) {
 
                 $this->paymentNotificaition
@@ -249,6 +276,15 @@ class PaymentLifeSycle
                         $subscriptionId,
                         $checkoutUrl
                     );
+
+                activity()
+                    ->performedOn($payment)
+                    ->withProperties([
+                        'from_status' => PaymentStatus::FAILED->value,
+                        'to_status' => PaymentStatus::PENDING->value,
+                        'subscription_id' => $payment->subscription_id,
+                    ])
+                    ->log('Payment retry initiated');
             });
 
             return $payment->load('subscription.price');
@@ -324,6 +360,7 @@ class PaymentLifeSycle
                 ),
             ]);
 
+
             $data = $this->subscriptionLifeService
                 ->prepareSubscriptionStatus(
                     [
@@ -341,10 +378,20 @@ class PaymentLifeSycle
 
             $subscriptionId = $payment->subscription->id;
 
-            DB::afterCommit(function () use ($subscriptionId) {
+            DB::afterCommit(function () use ($subscriptionId, $payment) {
 
                 $this->paymentNotificaition
                     ->refundPayment($subscriptionId);
+
+                activity()
+                    ->performedOn($payment)
+                    ->withProperties([
+                        'from_status' => PaymentStatus::PAID->value,
+                        'to_status' => PaymentStatus::REFUNDED->value,
+                        'subscription_id' => $payment->subscription_id,
+                        'stripe_refund_id' => $stripeRefund['id'] ?? null,
+                    ])
+                    ->log('Payment refunded');
             });
 
             return $payment;
@@ -412,14 +459,25 @@ class PaymentLifeSycle
 
             DB::afterCommit(function () use (
                 $subscriptionId,
-                $reason
+                $reason,
+                $payment
             ) {
 
                 $this->paymentNotificaition
                     ->failedPaid(
                         $subscriptionId,
-                        $reason
+                        $reason,
+
                     );
+                activity()
+                    ->performedOn($payment)
+                    ->withProperties([
+                        'from_status' => PaymentStatus::PENDING->value,
+                        'to_status' => PaymentStatus::FAILED->value,
+                        'subscription_id' => $payment->subscription_id,
+                        'failure_reason' => $reason,
+                    ])
+                    ->log('Payment failed');
             });
 
             return $payment;

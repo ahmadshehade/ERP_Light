@@ -2,8 +2,9 @@
 
 namespace Modules\Tenant\Support;
 
-use App\Enums\NameOfRoles;
+
 use Modules\Tenant\Enum\TenantPermission;
+use Modules\Tenant\Enum\TenantRoles;
 
 class TenantPermissionManagement
 {
@@ -11,12 +12,12 @@ class TenantPermissionManagement
     {
         return [
 
-            NameOfRoles::Owner->value => array_map(
+            TenantRoles::Owner->value => array_map(
                 fn(TenantPermission $permission) => $permission->value,
                 TenantPermission::cases()
             ),
 
-            NameOfRoles::Manager->value => [
+            TenantRoles::Manager->value => [
                 TenantPermission::TenantViewAnyDepartments->value,
                 TenantPermission::TenantViewDepartment->value,
                 TenantPermission::TenantCreateDepartment->value,
@@ -61,7 +62,7 @@ class TenantPermissionManagement
 
             ],
 
-            NameOfRoles::Employee->value => [
+            TenantRoles::Employee->value => [
 
                 // Departments
                 TenantPermission::TenantViewAnyDepartments->value,
@@ -82,7 +83,7 @@ class TenantPermissionManagement
                 TenantPermission::TenantOnHoldTask->value,
             ],
 
-            NameOfRoles::Guest->value => [
+            TenantRoles::Guest->value => [
 
                 // Departments
                 TenantPermission::TenantViewAnyDepartments->value,

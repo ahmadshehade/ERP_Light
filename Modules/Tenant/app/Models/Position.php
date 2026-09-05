@@ -11,11 +11,14 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Modules\Tenant\Enum\TenantRoles;
 use Spatie\Translatable\HasTranslations;
 use Illuminate\Support\Str;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
+
 // use Modules\Tenant\Database\Factories\PositionFactory;
 
 class Position extends Model
 {
-    use HasFactory, HasTranslations, SoftDeletes;
+    use HasFactory, HasTranslations, SoftDeletes, LogsActivity;
 
     /**
      * The database connection used by the model.
@@ -34,6 +37,17 @@ class Position extends Model
         'is_active',
 
     ];
+
+    /**
+     * Get the options for generating the slug.
+     */
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logAll()
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
+    }
 
 
     /**

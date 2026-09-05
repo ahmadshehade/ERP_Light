@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Modules\Tenant\Enum\TenantRoles;
 use Modules\Tenant\Models\TenantUser;
-use RuntimeException;
+use App\Exceptions\BusinessRuleException;
 use Spatie\Permission\Models\Role;
 
 class RoleService
@@ -80,12 +80,20 @@ class RoleService
         Role $role
     ): bool {
         if ($role->name === TenantRoles::Owner->value) {
-            throw new RuntimeException(
-                'Cannot assign owner role using role management'
+            throw new BusinessRuleException(
+                'Cannot assign owner role using role management',
+                409
             );
         }
         $tenantUser->assignRole($role);
         $this->clearCache();
+        activity()
+            ->performedOn($tenantUser)
+            ->withProperties([
+                'role' => $role->name,
+                'role_id' => $role->id,
+            ])
+            ->log('Role assigned to user');
         return true;
     }
 
@@ -103,12 +111,20 @@ class RoleService
             $role->name === TenantRoles::Owner->value &&
             $tenantUser->hasRole(TenantRoles::Owner->value)
         ) {
-            throw new RuntimeException(
-                'Cannot remove owner role'
+            throw new BusinessRuleException(
+                'Cannot remove owner role',
+                403
             );
         }
         $tenantUser->removeRole($role);
         $this->clearCache();
+        activity()
+            ->performedOn($tenantUser)
+            ->withProperties([
+                'role' => $role->name,
+                'role_id' => $role->id,
+            ])
+            ->log('Role removed from user');
         return true;
     }
 
@@ -131,6 +147,12 @@ class RoleService
             $roles->unique()->values()->all()
         );
         $this->clearCache();
+        activity()
+            ->performedOn($tenantUser)
+            ->withProperties([
+                'roles' => $roles,
+            ])
+            ->log('User roles synced');
         return true;
     }
 

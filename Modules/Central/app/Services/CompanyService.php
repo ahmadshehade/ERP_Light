@@ -4,6 +4,7 @@ namespace Modules\Central\Services;
 
 use App\Enums\NameOfCache;
 use App\Exceptions\BusinessRuleException;
+use App\Models\User;
 use App\Traits\ApplyFilters;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
@@ -15,6 +16,7 @@ use Modules\Central\Jobs\ProccessCompanyMediaJob;
 use Modules\Central\Models\Company;
 use Modules\Central\Services\Companies\CompanyNotification;
 use Modules\Central\Services\Tenant\TenantProvisioningService;
+use RuntimeException;
 
 class CompanyService
 {
@@ -320,6 +322,8 @@ class CompanyService
             DeleteCompanyJob::dispatch($company->id);
         }
         $this->flushCache();
+        activity()->causedBy($this->authenticatedUser())
+            ->log('All trashed companies force deleted');
         return true;
     }
 
@@ -340,8 +344,31 @@ class CompanyService
             $query->restore();
             DB::afterCommit(function () {
                 $this->flushCache();
+                activity()
+                    ->causedBy($this->authenticatedUser())
+                    ->withProperties([
+                        'action' => 'restore_all_trashed_companies',
+                        'user' => $this->authenticatedUser()->id,
+                    ])
+                    ->log('All trashed companies restored');
             });
             return true;
         });
+    }
+
+
+    /**
+     * Get the authenticated user
+     */
+    private function authenticatedUser()
+    {
+        $user = Auth::user();
+        if (!$user instanceof User) {
+            throw new RuntimeException(
+                'Authenticated user not found.',
+                404
+            );
+        }
+        return $user;
     }
 }

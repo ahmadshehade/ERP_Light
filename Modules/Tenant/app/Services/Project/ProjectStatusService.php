@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Modules\Tenant\Enum\ProjectStatus;
 use Modules\Tenant\Enum\TaskStatus;
 use Modules\Tenant\Models\Project;
-use RuntimeException;
+use App\Exceptions\BusinessRuleException;
 
 class ProjectStatusService
 {
@@ -28,8 +28,9 @@ class ProjectStatusService
     {
         return DB::connection('tenant')->transaction(function () use ($project) {
             if ($project->status !== ProjectStatus::Planned) {
-                throw new RuntimeException(
-                    'Project status is not planned.'
+                throw new BusinessRuleException(
+                    'Project status is not planned.',
+                    409
                 );
             }
             $project->status = ProjectStatus::InProgress;
@@ -42,6 +43,13 @@ class ProjectStatusService
             DB::connection('tenant')->afterCommit(function () use ($project) {
                 $this->flushCache();
                 $this->notify->startProjectNotify($project);
+                activity()
+                    ->performedOn($project)
+                    ->withProperties([
+                        'from_status' => ProjectStatus::Planned->value,
+                        'to_status' => ProjectStatus::InProgress->value,
+                    ])
+                    ->log('Project started');
             });
 
             return $project->refresh();
@@ -58,8 +66,9 @@ class ProjectStatusService
         return DB::connection('tenant')->transaction(function () use ($project) {
 
             if ($project->status !== ProjectStatus::InProgress) {
-                throw new RuntimeException(
-                    'Only in-progress projects can be put on hold.'
+                throw new BusinessRuleException(
+                    'Only in-progress projects can be put on hold.',
+                    409
                 );
             }
 
@@ -71,6 +80,13 @@ class ProjectStatusService
             DB::connection('tenant')->afterCommit(function () use ($project) {
                 $this->flushCache();
                 $this->notify->onHoldProjectNotify($project);
+                activity()
+                    ->performedOn($project)
+                    ->withProperties([
+                        'from_status' => ProjectStatus::InProgress->value,
+                        'to_status' => ProjectStatus::OnHold->value,
+                    ])
+                    ->log('Project put on hold');
             });
 
             return $project->refresh();
@@ -87,8 +103,9 @@ class ProjectStatusService
         return DB::connection('tenant')->transaction(function () use ($project) {
 
             if ($project->status !== ProjectStatus::OnHold) {
-                throw new RuntimeException(
-                    'Only on-hold projects can be resumed.'
+                throw new BusinessRuleException(
+                    'Only on-hold projects can be resumed.',
+                    409
                 );
             }
 
@@ -100,6 +117,13 @@ class ProjectStatusService
             DB::connection('tenant')->afterCommit(function () use ($project) {
                 $this->flushCache();
                 $this->notify->resumeProjectNotify($project);
+                activity()
+                    ->performedOn($project)
+                    ->withProperties([
+                        'from_status' => ProjectStatus::OnHold->value,
+                        'to_status' => ProjectStatus::InProgress->value,
+                    ])
+                    ->log('Project resumed');
             });
 
             return $project->refresh();
@@ -116,8 +140,9 @@ class ProjectStatusService
         return DB::connection('tenant')->transaction(function () use ($project) {
 
             if ($project->status !== ProjectStatus::InProgress) {
-                throw new RuntimeException(
-                    'Only in-progress projects can be cancelled.'
+                throw new BusinessRuleException(
+                    'Only in-progress projects can be cancelled.',
+                    409
                 );
             }
             $project->status = ProjectStatus::Cancelled;
@@ -132,6 +157,13 @@ class ProjectStatusService
             DB::connection('tenant')->afterCommit(function () use ($project) {
                 $this->flushCache();
                 $this->notify->cancelProjectNotify($project);
+                activity()
+                    ->performedOn($project)
+                    ->withProperties([
+                        'from_status' => ProjectStatus::InProgress->value,
+                        'to_status' => ProjectStatus::Cancelled->value,
+                    ])
+                    ->log('Project cancelled');
             });
 
             return $project->refresh();
@@ -148,8 +180,9 @@ class ProjectStatusService
         return DB::connection('tenant')->transaction(function () use ($project) {
 
             if ($project->status !== ProjectStatus::InProgress) {
-                throw new RuntimeException(
-                    'Only in-progress projects can be completed.'
+                throw new BusinessRuleException(
+                    'Only in-progress projects can be completed.',
+                    409
                 );
             }
             $hasIncompleteTasks = $project->tasks()
@@ -159,8 +192,9 @@ class ProjectStatusService
                 ])
                 ->exists();
             if ($hasIncompleteTasks) {
-                throw new RuntimeException(
-                    'Project cannot be completed because it has incomplete tasks.'
+                throw new BusinessRuleException(
+                    'Project cannot be completed because it has incomplete tasks.',
+                    409
                 );
             }
             $project->status = ProjectStatus::Completed;
@@ -169,6 +203,13 @@ class ProjectStatusService
             DB::connection('tenant')->afterCommit(function () use ($project) {
                 $this->flushCache();
                 $this->notify->completeProjectNotify($project);
+                activity()
+                    ->performedOn($project)
+                    ->withProperties([
+                        'from_status' => ProjectStatus::InProgress->value,
+                        'to_status' => ProjectStatus::Completed->value,
+                    ])
+                    ->log('Project completed');
             });
             return $project->refresh();
         });

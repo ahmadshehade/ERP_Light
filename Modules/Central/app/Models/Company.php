@@ -11,6 +11,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Spatie\Activitylog\LogOptions;
+
+use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
@@ -20,7 +23,7 @@ use Spatie\Translatable\HasTranslations;
 
 class Company extends Model implements HasMedia
 {
-    use HasFactory, SoftDeletes, HasTranslations, InteractsWithMedia;
+    use HasFactory, SoftDeletes, HasTranslations, InteractsWithMedia, LogsActivity;
 
     /**
      * The attributes that are mass assignable.
@@ -103,6 +106,16 @@ class Company extends Model implements HasMedia
     public function tenant(): HasOne
     {
         return $this->hasOne(Tenant::class, 'company_id');
+    }
+
+    /**
+     * Get the options for generating the activity log.
+     */
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()->logAll()
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
     }
 
 

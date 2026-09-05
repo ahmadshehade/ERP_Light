@@ -12,6 +12,8 @@ use Modules\Tenant\Enum\TaskPriority;
 use Modules\Tenant\Enum\TaskStatus;
 use Modules\Tenant\Enum\TenantPermission;
 use Modules\Tenant\Enum\TenantRoles;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\Translatable\HasTranslations;
@@ -20,7 +22,7 @@ use Spatie\Translatable\HasTranslations;
 
 class Task extends Model implements HasMedia
 {
-    use HasFactory, SoftDeletes, HasTranslations, InteractsWithMedia;
+    use HasFactory, SoftDeletes, HasTranslations, InteractsWithMedia, LogsActivity;
 
     protected $table = 'tasks';
 
@@ -41,6 +43,16 @@ class Task extends Model implements HasMedia
         'completed_at',
         'is_active'
     ];
+    /**
+     * Get the options for generating the activity log.
+     */
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logAll()
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
+    }
 
     /**
      * The attributes that should be cast.

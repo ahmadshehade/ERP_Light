@@ -10,7 +10,7 @@ use Modules\Tenant\Enum\TaskStatus;
 use Modules\Tenant\Enum\TenantRoles;
 use Modules\Tenant\Models\Task;
 use Modules\Tenant\Models\TenantUser;
-use RuntimeException;
+use App\Exceptions\BusinessRuleException;
 
 class TaskActionService
 {
@@ -28,12 +28,13 @@ class TaskActionService
             $this->ensureUserCanManageTask($task);
             if ($task->due_date->isPast()) {
                 $task->update(['status' => TaskStatus::CANCELLED->value,]);
-                throw new RuntimeException('This task has expired and cannot be completed.');
+                throw new BusinessRuleException('This task has expired and cannot be completed.', 409);
             }
 
             if ($task->status !== TaskStatus::IN_PROGRESS) {
-                throw new RuntimeException(
-                    'Only tasks in progress can be completed.'
+                throw new BusinessRuleException(
+                    'Only tasks in progress can be completed.',
+                    409
                 );
             }
             $task->update([
@@ -43,6 +44,15 @@ class TaskActionService
             DB::connection('tenant')->afterCommit(function () use ($task) {
                 $this->flushCache();
                 $this->notify->completeTaskNotify($task);
+                activity()
+                    ->performedOn($task)
+                    ->withProperties([
+                        'from_status' => TaskStatus::IN_PROGRESS->value,
+                        'to_status' => TaskStatus::COMPLETED->value,
+                        'project_id' => $task->project_id,
+                        'team_id' => $task->team_id,
+                    ])
+                    ->log('Task completed');
             });
             return $task->load('project', 'team.tenantUsers.user');
         });
@@ -61,16 +71,27 @@ class TaskActionService
                 TaskStatus::COMPLETED,
                 TaskStatus::CANCELLED,
             ], true)) {
-                throw new RuntimeException(
-                    'This task cannot be cancelled.'
+                throw new BusinessRuleException(
+                    'This task cannot be cancelled.',
+                    409
                 );
             }
+            $fromStatus = $task->status;
             $task->update([
                 'status' => TaskStatus::CANCELLED->value,
             ]);
-            DB::connection('tenant')->afterCommit(function () use ($task) {
+            DB::connection('tenant')->afterCommit(function () use ($task, $fromStatus) {
                 $this->flushCache();
                 $this->notify->cancelTaskNotify($task);
+                activity()
+                    ->performedOn($task)
+                    ->withProperties([
+                        'from_status' => $fromStatus,
+                        'to_status' => TaskStatus::CANCELLED->value,
+                        'project_id' => $task->project_id,
+                        'team_id' => $task->team_id,
+                    ])
+                    ->log('Task cancelled');
             });
 
             return $task->load('project', 'team.tenantUsers.user');
@@ -87,8 +108,9 @@ class TaskActionService
         return DB::connection('tenant')->transaction(function () use ($task) {
             $this->ensureUserCanManageTask($task);
             if ($task->status !== TaskStatus::IN_PROGRESS) {
-                throw new RuntimeException(
-                    'Only tasks in progress can be put on hold.'
+                throw new BusinessRuleException(
+                    'Only tasks in progress can be put on hold.',
+                    409
                 );
             }
             $task->update([
@@ -97,6 +119,15 @@ class TaskActionService
             DB::connection('tenant')->afterCommit(function () use ($task) {
                 $this->flushCache();
                 $this->notify->onHoldTaskNotify($task);
+                activity()
+                    ->performedOn($task)
+                    ->withProperties([
+                        'from_status' => TaskStatus::IN_PROGRESS->value,
+                        'to_status' => TaskStatus::OnHold->value,
+                        'project_id' => $task->project_id,
+                        'team_id' => $task->team_id,
+                    ])
+                    ->log('Task put on hold');
             });
             return $task->load('project', 'team.tenantUsers.user');
         });
@@ -124,7 +155,7 @@ class TaskActionService
             ->exists();
 
         if (!$isMember && !$owner && !$manager) {
-            throw new RuntimeException('You cant manage This Task');
+            throw new BusinessRuleException('You cant manage This Task', 403);
         }
     }
 

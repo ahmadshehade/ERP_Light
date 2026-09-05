@@ -16,10 +16,11 @@ use Modules\Central\Models\Subscription;
 use Modules\Central\Models\SubscriptionPrice;
 use Modules\Central\Services\Payments\PaymentService;
 use App\Exceptions\BusinessRuleException;
+use App\Models\User;
 use Modules\Central\Services\Payments\StripePaymentService;
 use Modules\Central\Services\Subscriptions\SubscriptionNotificationService;
 use Illuminate\Support\Facades\Log;
-
+use RuntimeException;
 
 class SubscriptionService
 {
@@ -478,9 +479,27 @@ class SubscriptionService
                         subscription: $newSubscription,
                         checkoutUrl: $checkoutUrl
                     );
+                activity()->causedBy($this->authenticatedUser())->withProperties([
+                    'subscription_id' => $newSubscription->id,
+                    'checkout_url' => $checkoutUrl
+                ])->log('Subscription renewed');
             });
 
             return $newSubscription;
         });
+    }
+
+    /**
+     * Get the authenticated user
+     */
+    private function authenticatedUser(): User
+    {
+        $user = Auth::user();
+
+        if (!$user instanceof User) {
+            throw new RuntimeException('Authenticated user not found.', 404);
+        }
+
+        return $user;
     }
 }

@@ -85,6 +85,7 @@ class SubscriptionPlanService
                     $this->planNotify->activeNotification($plan);
                 }
             });
+
             return $plan;
         });
     }

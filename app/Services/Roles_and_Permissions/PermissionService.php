@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Traits\ApplyFilters;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use RuntimeException;
 use Spatie\Permission\Models\Permission;
 
 class PermissionService
@@ -64,6 +65,14 @@ class PermissionService
         $permission->syncRoles($roles);
 
         $this->clearCache();
+        $user = Auth::user();
+        activity()
+            ->causedBy($user)
+            ->withProperties([
+                'permission' => $permission->name,
+                'roles' => $permission->roles->pluck('name')->values()->all(),
+            ])
+            ->log('Permission roles synced');
 
         return $permission->load('roles');
     }
@@ -74,8 +83,18 @@ class PermissionService
     public function giveToUser(Permission $permission, User $user)
     {
         $user->givePermissionTo($permission);
-
         $this->clearCache();
+        $actor = Auth::user();
+        if (!$actor instanceof User) {
+            throw new RuntimeException('Authenticated user not found.', 404);
+        }
+        activity()
+            ->causedBy($actor)
+            ->withProperties([
+                'permission' => $permission->name,
+                'user' => $user->id,
+            ])
+            ->log('Permission given to user');
 
         return true;
     }
@@ -86,8 +105,18 @@ class PermissionService
     public function revokeFromUser(Permission $permission, User $user)
     {
         $user->revokePermissionTo($permission);
-
         $this->clearCache();
+        $actor = Auth::user();
+        if (!$actor instanceof User) {
+            throw new RuntimeException('Authenticated user not found.');
+        }
+        activity()
+            ->causedBy($actor)
+            ->withProperties([
+                'permission' => $permission->name,
+                'user' => $user->id,
+            ])
+            ->log('Permission revoked from user');
 
         return true;
     }

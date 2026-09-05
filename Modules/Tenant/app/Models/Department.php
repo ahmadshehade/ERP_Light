@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Modules\Tenant\Enum\TenantRoles;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
@@ -18,12 +20,23 @@ use Spatie\Translatable\HasTranslations;
 
 class Department extends Model implements HasMedia
 {
-    use HasFactory, HasTranslations, InteractsWithMedia, SoftDeletes;
+    use HasFactory, HasTranslations, InteractsWithMedia, SoftDeletes, LogsActivity;
 
     protected $table = 'departments';
 
     protected $connection = 'tenant';
 
+
+    /**
+     * Get the options for generating the slug.
+     */
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logAll()
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
+    }
     /**
      * The attributes that are mass assignable.
      */

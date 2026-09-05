@@ -89,7 +89,7 @@ Route::middleware([
 
         Route::get('/{department}', [DepartmentController::class, 'show'])
             ->name('departments.show');
-        Route::post('/{department}', [DepartmentController::class, 'update'])
+        Route::patch('/{department}', [DepartmentController::class, 'update'])
             ->name('departments.update');
         Route::delete('/{department}', [DepartmentController::class, 'destroy'])
             ->name('departments.destroy');
@@ -137,7 +137,7 @@ Route::middleware([
             ->name('teams.store');
         Route::get('/{team}', [TeamController::class, 'show'])
             ->name('teams.show');
-        Route::post('/{team}', [TeamController::class, 'update'])
+        Route::put('/{team}', [TeamController::class, 'update'])
             ->name('teams.update');
         Route::delete('/{team}', [TeamController::class, 'destroy'])
             ->name('teams.destroy');
@@ -167,7 +167,7 @@ Route::middleware([
             ->name('project.store');
         Route::get('/{project}', [ProjectController::class, 'show'])
             ->name('project.show');
-        Route::post('/{project}', [ProjectController::class, 'update'])
+        Route::patch('/{project}', [ProjectController::class, 'update'])
             ->name('project.update');
         Route::delete('/{project}', [ProjectController::class, 'destroy'])
             ->name('project.destroy');
@@ -205,7 +205,7 @@ Route::middleware([
             ->name('tasks.store');
         Route::get('/{task}', [TaskController::class, 'show'])
             ->name('tasks.show');
-        Route::post('/{task}', [TaskController::class, 'update'])
+        Route::patch('/{task}', [TaskController::class, 'update'])
             ->name('tasks.update');
         Route::delete('/{task}', [TaskController::class, 'destroy'])
             ->name('tasks.destroy');
@@ -215,7 +215,7 @@ Route::middleware([
             ->name('tasks.complete');
         Route::post('{task}/cancel', [TaskController::class, 'cancel'])
             ->name('tasks.cancel');
-        Route::post('on-hold/{task}', [TaskController::class, 'onHold'])
+        Route::post('/{task}/on-hold', [TaskController::class, 'onHold'])
             ->name('tasks.onHold');
     });
 });

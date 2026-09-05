@@ -11,12 +11,15 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Spatie\Activitylog\LogOptions;
+use Override;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 // use Modules\Central\Database\Factories\SubscriptionFactory;
 
 class Subscription extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, LogsActivity;
 
     /**
      * The attributes that are mass assignable.
@@ -79,6 +82,16 @@ class Subscription extends Model
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class, 'subscription_id');
+    }
+
+    /**
+     * Get the options for generating the activity log.
+     */
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logAll()->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
     }
 
 

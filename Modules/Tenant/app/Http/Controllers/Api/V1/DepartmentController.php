@@ -35,7 +35,7 @@ class DepartmentController extends Controller
     {
         $this->authorize('create', Department::class);
         $department = $this->departmentService->store($request->validated());
-        return $this->successMessage('Department created successfully', ['department' => $department], 200);
+        return $this->successMessage('Department created successfully', ['department' => $department], 201);
     }
 
     /**
@@ -78,8 +78,8 @@ class DepartmentController extends Controller
     public function restore(Department $department): JsonResponse
     {
         $this->authorize('restore', $department);
-        $this->departmentService->restore($department);
-        return $this->successMessage('Department restored successfully', [], 200);
+        $data = $this->departmentService->restore($department);
+        return $this->successMessage('Department restored successfully', ['department' => $data], 200);
     }
 
     /**

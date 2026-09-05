@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Artisan;
 use Modules\Central\Models\Subscription;
 use Modules\Central\Models\Tenant;
 use Modules\Tenant\Models\TenantUser;
-use App\Exceptions\BusinessRuleException;
+use RuntimeException;
 
 class TenantProvisioningService
 {
@@ -19,9 +19,8 @@ class TenantProvisioningService
         $company = $subscription->company;
 
         if (!$company) {
-            throw new BusinessRuleException(
-                'Subscription company not found.',
-                404
+            throw new RuntimeException(
+                'Subscription company not found.'
             );
         }
 
@@ -29,9 +28,8 @@ class TenantProvisioningService
             ->find($company->owner_id);
 
         if (!$owner) {
-            throw new BusinessRuleException(
-                'Company owner not found.',
-                404
+            throw new RuntimeException(
+                'Company owner not found.'
             );
         }
 
@@ -74,8 +72,9 @@ class TenantProvisioningService
         return $tenant;
     }
 
+
     /**
-     * Delete tenant
+     * Delete a tenant
      */
     public function delete(Tenant $tenant)
     {

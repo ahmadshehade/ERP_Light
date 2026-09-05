@@ -24,11 +24,16 @@ class PaymentService
      * @param array $data
      * @return string
      */
-    protected function genKey(array $data = [], string $prefix): string
+    protected function genKey(string $prefix, array $data = []): string
     {
         $user = Auth::user();
-        $userKey = $user ? $user->id . implode('_', $user->roles->pluck('name')->toArray()) : '';
-        $cacheKey = $userKey . $prefix . NameOfCache::PAYMENT->value . md5(json_encode($data));
+        $userKey = $user
+            ? $user->id . implode('_', $user->roles->pluck('name')->toArray())
+            : '';
+        $cacheKey = $userKey
+            . $prefix
+            . NameOfCache::PAYMENT->value
+            . md5(json_encode($data));
         return $cacheKey;
     }
 
@@ -48,7 +53,7 @@ class PaymentService
      */
     public function getAll(array $data = []): array
     {
-        $cacheKey = $this->genKey($data, "_no_trashed_");
+        $cacheKey = $this->genKey("_no_trashed_", $data);
         return Cache::tags(NameOfCache::PAYMENT->value)->remember($cacheKey, self::TIME_TTL, function () use ($data) {
             $payments = Payment::query()->ownerPaymnets(Auth::user())->with('subscription.company.owner');
             if (!empty($data)) {
@@ -224,7 +229,7 @@ class PaymentService
      */
     public function getAllTrashed(array $data = []): array
     {
-        $cacheKey = $this->genKey($data, "_trashed_");
+        $cacheKey = $this->genKey("_trashed_", $data);
         return Cache::tags(NameOfCache::PAYMENT->value)->remember($cacheKey, self::TIME_TTL, function () use ($data) {
             $payments = Payment::onlyTrashed()->with('subscription.company.owner');
             if (!empty($data)) {

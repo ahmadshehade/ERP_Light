@@ -11,6 +11,8 @@ use Modules\Central\Models\Company;
 use Modules\Central\Models\Subscription;
 use Modules\Central\Models\SubscriptionPrice;
 use App\Exceptions\BusinessRuleException;
+use App\Models\User;
+use RuntimeException;
 
 class SubscriptionLifecycleService
 {
@@ -51,6 +53,8 @@ class SubscriptionLifecycleService
             PriceInterval::YEAR  => $startDate->copy()->addYear(),
         };
     }
+
+
 
     /**
      * Validate and prepare subscription status
@@ -215,6 +219,7 @@ class SubscriptionLifecycleService
             $subscription->update([
                 'status' => SubscriptionStatus::TRAIL_EXPIRED,
             ]);
+
         } elseif (
             $subscription->end_date &&
             $subscription->end_date->isPast()

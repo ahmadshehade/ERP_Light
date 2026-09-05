@@ -12,7 +12,7 @@ use Illuminate\Support\Arr;
 use Modules\Tenant\Jobs\ProcessDepartmentMediaJob;
 use Modules\Tenant\Models\Department;
 use Modules\Tenant\Models\TenantUser;
-use RuntimeException;
+use App\Exceptions\BusinessRuleException;
 
 class DepartmentService
 {
@@ -65,7 +65,6 @@ class DepartmentService
     {
         $tenantUser = TenantUser::where('user_id', Auth::id())->firstOrFail();
         return Department::query()
-            ->active($tenantUser)
             ->with('media')
             ->findOrFail($departmentId);
     }
@@ -108,7 +107,7 @@ class DepartmentService
                 ->lockForUpdate()
                 ->first();
             if (!$department) {
-                throw new RuntimeException('Department Not Found.');
+                throw new BusinessRuleException('Department Not Found.', 404);
             }
             $photo = Arr::pull($data, 'photo', []);
             $department->update($data);
@@ -170,7 +169,7 @@ class DepartmentService
                 });
                 return $department->load(['media']);
             }
-            throw new RuntimeException('Department is not trashed');
+            throw new BusinessRuleException('Department is not trashed', 404);
         });
     }
 
@@ -188,7 +187,7 @@ class DepartmentService
                 $this->clearCache();
                 return true;
             }
-            throw new RuntimeException('Department is not trashed');
+            throw new BusinessRuleException('Department is not trashed', 404);
         });
     }
 
@@ -200,7 +199,7 @@ class DepartmentService
     public function getTrashed(Department $department): Department
     {
         if (!$department->trashed()) {
-            throw new RuntimeException('Department is not trashed');
+            throw new BusinessRuleException('Department is not trashed', 404);
         }
         return $department->load(['media']);
     }
@@ -231,7 +230,7 @@ class DepartmentService
         return DB::connection('tenant')->transaction(function () {
             $count = Department::onlyTrashed()->restore();
             if ($count == 0) {
-                throw new RuntimeException("No trashed departments to restore.");
+                throw new BusinessRuleException("No trashed departments to restore.", 404);
             }
             $this->clearCache();
             return true;
@@ -258,8 +257,9 @@ class DepartmentService
                     }
                 });
             if ($count === 0) {
-                throw new RuntimeException(
-                    'No trashed departments to delete.'
+                throw new BusinessRuleException(
+                    'No trashed departments to delete.',
+                    404
                 );
             }
             $this->clearCache();
