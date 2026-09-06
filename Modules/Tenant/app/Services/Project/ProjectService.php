@@ -52,18 +52,18 @@ class ProjectService
      * @param array $data
      * @return array
      */
-    public function getAll(array $data = []): array
+    public function getAll(array $data = [])
     {
         $page = request()->integer('page', 1);
         $perPage = request()->integer('per_page', 15);
         $cacheKey = $this->genKey($data, 'no_trashed', $page, $perPage);
         return Cache::tags(NameOfCache::PROJECT->value)->remember($cacheKey, self::TIME_TTL, function () use ($data) {
-            $projects = Project::active(Auth::user())->with('tasks');
+            $projects = Project::active(Auth::user())->with('tasks', 'media');
             if (!empty($data)) {
                 $this->filterData($projects, $data);
             }
             $this->sortData($projects, $data, ['name', 'description', 'created_at', 'start_date', 'end_date', 'priority', 'status']);
-            return $projects->paginate(15)->toArray();
+            return $projects->paginate(15);
         });
     }
 
@@ -267,7 +267,7 @@ class ProjectService
      * @param array $data
      * @return array
      */
-    public function getAllTrashed(array $data): array
+    public function getAllTrashed(array $data)
     {
         $page = request()->integer('page', 1);
         $perPage = request()->integer('per_page', 15);
@@ -278,7 +278,7 @@ class ProjectService
                 $this->filterData($projects, $data);
             }
             $this->sortData($projects, $data, ['name', 'description', 'created_at', 'start_date', 'end_date', 'priority', 'status']);
-            return $projects->paginate(15)->toArray();
+            return $projects->paginate(15);
         });
     }
 

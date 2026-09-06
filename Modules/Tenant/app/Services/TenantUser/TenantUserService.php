@@ -54,7 +54,7 @@ class TenantUserService
      * @param array $data
      * @return array
      */
-    public function getAll(array $data = []): array
+    public function getAll(array $data = [])
     {
         $page = request()->integer('page', 1);
         $perPage = request()->integer('perPage', 15);
@@ -70,8 +70,8 @@ class TenantUserService
                 $this->sortData($users, $data, ['user_id', 'created_at']);
                 return $users
                     ->with('user')
-                    ->paginate(15)
-                    ->toArray();
+                    ->paginate(15);
+
             });
     }
 

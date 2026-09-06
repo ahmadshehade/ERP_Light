@@ -55,7 +55,7 @@ class TaskService
      * @param array $data
      * @return array
      */
-    public function getAll(array $data = []): array
+    public function getAll(array $data = [])
     {
         $page = request()->integer('page', 1);
         $perPage = request()->integer('per_page', 15);
@@ -66,7 +66,7 @@ class TaskService
                 $this->filterData($tasks, $data);
             }
             $this->sortData($tasks, $data, ['team_id', 'created_at', 'status', 'priority', 'project_id', 'start_date', 'due_date', 'completed_at']);
-            return $tasks->paginate(15)->toArray();
+            return $tasks->paginate(15);
         });
     }
 
@@ -244,7 +244,7 @@ class TaskService
      *@param array $data
      *@return array
      */
-    public function getAllTrashed(array $data = []): array
+    public function getAllTrashed(array $data = [])
     {
         $page = request()->integer('page', 1);
         $perPage = request()->integer('perPage', 15);
@@ -259,7 +259,7 @@ class TaskService
                 $this->filterData($trashedTask, $data);
             }
             $this->sortData($trashedTask, $data, ['team_id', 'created_at', 'status', 'priority', 'project_id', 'start_date', 'due_date', 'completed_at']);
-            return $trashedTask->paginate(15)->toArray();
+            return $trashedTask->paginate(15);
         });
     }
 

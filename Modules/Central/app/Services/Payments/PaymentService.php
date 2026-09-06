@@ -52,7 +52,7 @@ class PaymentService
      * @param array $data
      * @return array
      */
-    public function getAll(array $data = []): array
+    public function getAll(array $data = [])
     {
         $page = request()->integer('page', 1);
         $perPage = request()->integer('per_page', 15);
@@ -62,7 +62,8 @@ class PaymentService
             if (!empty($data)) {
                 $this->filterData($payments, $data);
             }
-            return $payments->paginate(15)->toArray();
+            $this->sortData($payments, $data, ['subscription_id', 'status', 'created_at', 'amount', 'paid_at']);
+            return $payments->paginate(15);
         });
     }
 
@@ -230,7 +231,7 @@ class PaymentService
      * @param array $data
      * @return array
      */
-    public function getAllTrashed(array $data = []): array
+    public function getAllTrashed(array $data = [])
     {
         $page = request()->integer('page', 1);
         $perPage = request()->integer('per_page', 15);
@@ -240,7 +241,8 @@ class PaymentService
             if (!empty($data)) {
                 $this->filterData($payments, $data);
             }
-            return $payments->paginate(15)->toArray();
+            $this->sortData($payments, $data, ['subscription_id', 'status', 'created_at', 'amount', 'paid_at']);
+            return $payments->paginate(15);
         });
     }
 

@@ -65,7 +65,7 @@ class SubscriptionPlanService
      * @param array $data
      *  @return array
      */
-    public function getAllPlans(array $data = []): array
+    public function getAllPlans(array $data = [])
     {
         $page = request()->integer('page', 1);
         $perPage = request()->integer('per_page', 15);
@@ -92,8 +92,7 @@ class SubscriptionPlanService
                         ['name', 'created_at']
                     );
                     return $plans
-                        ->paginate($perPage)
-                        ->toArray();
+                        ->paginate($perPage);
                 }
             );
     }
@@ -243,7 +242,7 @@ class SubscriptionPlanService
      * @param array $data
      * @return array
      */
-    public  function viewTrashedPlans(array $data = []): array
+    public  function viewTrashedPlans(array $data = [])
     {
 
         $page = request()->integer('page', 1);
@@ -260,7 +259,7 @@ class SubscriptionPlanService
                 $this->filterData($plans, $data);
             }
             $this->sortData($plans, $data, ['name', 'created_at']);
-            return $plans->paginate(15)->toArray();
+            return $plans->paginate(15);
         });
     }
 

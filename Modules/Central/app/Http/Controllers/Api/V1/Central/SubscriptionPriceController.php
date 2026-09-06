@@ -9,6 +9,7 @@ use Modules\Central\Http\Requests\Api\V1\Central\SubscribePrice\StoreSubscriptio
 use Modules\Central\Http\Requests\Api\V1\Central\SubscribePrice\UpdateSubscriptionPriceRequest;
 use Modules\Central\Services\SubscriptionPriceService;
 use Modules\Central\Models\SubscriptionPrice;
+use Modules\Central\Transformers\SubscriptionPriceResource;
 
 class SubscriptionPriceController extends Controller
 {
@@ -23,7 +24,7 @@ class SubscriptionPriceController extends Controller
         $this->authorize('viewAny', SubscriptionPrice::class);
         $filters = $request->only(['plan_id', 'is_active', 'stripe_price_id', 'price', 'interval']);
         $prices = $this->service->getAll($filters);
-        return $this->successMessage('Successfully Retrieved All Subscription Price', ['price' => $prices], 200);
+        return $this->successMessage('Successfully Retrieved All Subscription Price', SubscriptionPriceResource::collection($prices), 200);
     }
 
     /**
@@ -33,7 +34,7 @@ class SubscriptionPriceController extends Controller
     {
         $this->authorize('create', SubscriptionPrice::class);
         $price = $this->service->store($request->validated());
-        return $this->successMessage('Successfully Created Subscription Price', ['price' => $price], 201);
+        return $this->successMessage('Successfully Created Subscription Price', SubscriptionPriceResource::make($price), 201);
     }
 
     /**
@@ -43,7 +44,7 @@ class SubscriptionPriceController extends Controller
     {
         $this->authorize('view', $subscriptionPrice);
         $price = $this->service->get($subscriptionPrice);
-        return $this->successMessage('Successfully Retrieved Subscription Price', ['price' => $price], 200);
+        return $this->successMessage('Successfully Retrieved Subscription Price', SubscriptionPriceResource::make($price), 200);
     }
 
     /**
@@ -53,7 +54,7 @@ class SubscriptionPriceController extends Controller
     {
         $this->authorize('update', $subscriptionPrice);
         $price = $this->service->update($subscriptionPrice, $request->validated());
-        return $this->successMessage('Successfully Updated Subscription Price', ['price' => $price], 200);
+        return $this->successMessage('Successfully Updated Subscription Price', SubscriptionPriceResource::make($price), 200);
     }
 
     /**
@@ -87,7 +88,7 @@ class SubscriptionPriceController extends Controller
     {
         $this->authorize('restore', $subscriptionPrice);
         $data = $this->service->restoreSubscriptionPrice($subscriptionPrice);
-        return $this->successMessage('Successfully Restored Subscription Price', ['SubscriptionPrice' => $data], 200);
+        return $this->successMessage('Successfully Restored Subscription Price', SubscriptionPriceResource::make($data), 200);
     }
 
     /**
@@ -123,7 +124,7 @@ class SubscriptionPriceController extends Controller
         $this->authorize('viewAnyTrashedPrices', SubscriptionPrice::class);
         $filters = $request->only(['plan_id', 'is_active', 'stripe_price_id', 'price', 'interval']);
         $prices = $this->service->getTrashedSubscriptionPrices($filters);
-        return $this->successMessage('Successfully Retrieved All Trashed Subscription Price', ['price' => $prices], 200);
+        return $this->successMessage('Successfully Retrieved All Trashed Subscription Price', SubscriptionPriceResource::collection($prices), 200);
     }
 
 
@@ -136,6 +137,6 @@ class SubscriptionPriceController extends Controller
     {
         $this->authorize('viewTrashed', $subscriptionPrice);
         $price = $this->service->getTrashedSubscriptionPrice($subscriptionPrice);
-        return $this->successMessage('Successfully Retrieved Trashed Subscription Price', ['price' => $price], 200);
+        return $this->successMessage('Successfully Retrieved Trashed Subscription Price', SubscriptionPriceResource::make($price), 200);
     }
 }

@@ -4,9 +4,9 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\Users\UpdateUserRequest;
+use App\Http\Resources\UserResource;
 use App\Models\User;
 use App\Services\UserService;
-use Illuminate\Foundation\Auth\Access\Authorizable;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -39,7 +39,7 @@ class UserController extends Controller
 
         return $this->successMessage(
             'Users retrieved successfully.',
-            ['users' => $users],
+            UserResource::collection($users),
             200
         );
     }
@@ -50,11 +50,10 @@ class UserController extends Controller
     public function show(User $user): JsonResponse
     {
         $this->authorize('view', $user);
+        $data = $this->userService->getUser($user);
         return $this->successMessage(
             'User retrieved successfully.',
-            [
-                'user' => $this->userService->getUser($user),
-            ],
+            UserResource::make($data),
             200
         );
     }
@@ -72,7 +71,7 @@ class UserController extends Controller
 
         return $this->successMessage(
             'User updated successfully.',
-            ['user' => $user],
+            UserResource::make($user),
             200
         );
     }
@@ -102,7 +101,7 @@ class UserController extends Controller
 
         return $this->successMessage(
             'User permanently deleted successfully.',
-            ['data' => 'success'],
+            [],
             200
         );
     }
@@ -138,7 +137,7 @@ class UserController extends Controller
 
         return $this->successMessage(
             'Trashed users retrieved successfully.',
-            ['users' => $users],
+            UserResource::collection($users),
             200
         );
     }
@@ -153,7 +152,7 @@ class UserController extends Controller
 
         return $this->successMessage(
             'All users restored successfully.',
-            ['data' => 'success'],
+            [],
             200
         );
     }
@@ -168,7 +167,7 @@ class UserController extends Controller
 
         return $this->successMessage(
             'Trash emptied successfully.',
-            ['data' => 'success'],
+            [],
             200
         );
     }

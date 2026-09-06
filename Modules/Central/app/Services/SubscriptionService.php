@@ -64,7 +64,7 @@ class SubscriptionService
     /**
      * Get all subscriptions
      */
-    public function getAll(array $data = []): array
+    public function getAll(array $data = [])
     {
         $page = request()->integer('page', 1);
         $perPage = request()->integer('per_page', 15);
@@ -81,7 +81,7 @@ class SubscriptionService
                     $this->filterData($query, $data);
                 }
                 $this->sortData($query, $data, ['company_id', 'status', 'created_at', 'end_date', 'trial_end_date', 'canceled_at', 'start_date']);
-                return $query->paginate(15)->toArray();
+                return $query->paginate(15);
             });
     }
     /**
@@ -343,11 +343,11 @@ class SubscriptionService
     /**
      * Get trashed subscriptions
      */
-    public function getAllTrashed(array $data = []): array
+    public function getAllTrashed(array $data = [])
     {
-        $page=request()->integer('page', 1);
-        $perPage=request()->integer('per_page', 15);
-        $cacheKey = $this->genKey($data, '_trashed_',$page,$perPage);
+        $page = request()->integer('page', 1);
+        $perPage = request()->integer('per_page', 15);
+        $cacheKey = $this->genKey($data, '_trashed_', $page, $perPage);
         return Cache::tags(NameOfCache::SUBSCRIPTION->value)
             ->remember($cacheKey, 60, function () use ($data) {
                 $query = Subscription::onlyTrashed()
@@ -360,7 +360,7 @@ class SubscriptionService
                     $this->filterData($query, $data);
                 }
                 $this->sortData($query, $data, ['company_id', 'status', 'created_at', 'end_date', 'trial_end_date', 'canceled_at', 'start_date']);
-                return $query->paginate(15)->toArray();
+                return $query->paginate(15);
             });
     }
     /**

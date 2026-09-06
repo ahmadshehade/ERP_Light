@@ -65,7 +65,7 @@ class CompanyService
     /**
      * Get all companies.
      */
-    public function getAllCompanies(array $data = []): array
+    public function getAllCompanies(array $data = [])
     {
         $page = request()->integer('page', 1);
         $perPage = request()->integer('per_page', 15);
@@ -84,7 +84,7 @@ class CompanyService
                         $this->filterData($query, $data);
                     }
                     $this->sortData($query, $data, ['name', 'subdomain', 'max_users', 'created_at']);
-                    return $query->paginate(15)->toArray();
+                    return $query->paginate(15);
                 }
             );
     }
@@ -306,7 +306,7 @@ class CompanyService
                         $this->filterData($query, $data);
                     }
                     $this->sortData($query, $data, ['name', 'subdomain', 'max_users', 'created_at']);
-                    return $query->paginate(15)->toArray();
+                    return $query->paginate(15);
                 }
             );
     }

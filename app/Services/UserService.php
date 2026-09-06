@@ -5,8 +5,6 @@ namespace App\Services;
 use App\Enums\NameOfCache;
 use App\Models\User;
 use App\Traits\ApplyFilters;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Client\HttpClientException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
@@ -32,7 +30,7 @@ class UserService
     /**
      * Get all users.
      */
-    public function getAllUsers(array $filters = []): array
+    public function getAllUsers(array $filters = [])
     {
         $user = Auth::user();
         $cacheKey = $this->genKey($user, $filters, 'all_users');
@@ -44,7 +42,7 @@ class UserService
                     $this->filterData($query, $filters);
                 }
                 $this->sortData($query, $filters, ['name', 'created_at', 'updated_at']);
-                return $query->paginate(15)->toArray();
+                return $query->paginate(15);
             });
     }
 
@@ -124,7 +122,7 @@ class UserService
     /**
      * Get trashed users.
      */
-    public function trashedUsers(array $filters = []): array
+    public function trashedUsers(array $filters = [])
     {
         $user = Auth::user();
         $cacheKey = $this->genKey($user, $filters, 'trashed_users');
@@ -140,7 +138,7 @@ class UserService
                     $this->filterData($query, $filters);
                 }
                 $this->sortData($query, $filters, ['name', 'created_at', 'updated_at']);
-                return $query->paginate(15)->toArray();
+                return $query->paginate(15);
             });
     }
 

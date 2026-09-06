@@ -11,6 +11,7 @@ use Modules\Central\Http\Requests\Api\V1\Central\Subscriptions\ReNewSubscription
 use Modules\Central\Http\Requests\Api\V1\Central\Subscriptions\StoreSubscriptionRequest;
 use Modules\Central\Http\Requests\Api\V1\Central\Subscriptions\UpdateSubscriptionRequest;
 use Modules\Central\Models\Subscription;
+use Modules\Central\Transformers\SubscriptionResource;
 
 class SubscriptionController extends Controller
 {
@@ -24,7 +25,7 @@ class SubscriptionController extends Controller
         $this->authorize('viewAny', Subscription::class);
         $filters = $request->only(['price_id', 'company_id', 'status']);
         $subscriptions = $this->subscriptionService->getAll($filters);
-        return $this->successMessage('Successfully Retrieved Subscriptions', ['subscriptions' => $subscriptions], 200);
+        return $this->successMessage('Successfully Retrieved Subscriptions', SubscriptionResource::collection($subscriptions), 200);
     }
     /**
      * Store a newly created resource in storage.
@@ -33,7 +34,7 @@ class SubscriptionController extends Controller
     {
         $this->authorize('create', Subscription::class);
         $subscription = $this->subscriptionService->store($request->validated());
-        return $this->successMessage('Successfully Created Subscription', ['subscription' => $subscription], 201);
+        return $this->successMessage('Successfully Created Subscription', SubscriptionResource::make($subscription), 201);
     }
 
     /**
@@ -43,7 +44,7 @@ class SubscriptionController extends Controller
     {
         $this->authorize('view', $subscription);
         $data = $this->subscriptionService->getSubscription($subscription);
-        return $this->successMessage('Successfully Retrieved Subscription', ['subscription' => $data], 200);
+        return $this->successMessage('Successfully Retrieved Subscription', SubscriptionResource::make($data), 200);
     }
     /**
      * Update the specified resource in storage.
@@ -52,7 +53,7 @@ class SubscriptionController extends Controller
     {
         $this->authorize('update', $subscription);
         $data = $this->subscriptionService->update($subscription, $request->validated());
-        return $this->successMessage('Successfully Updated Subscription', ['subscription' => $data], 200);
+        return $this->successMessage('Successfully Updated Subscription', SubscriptionResource::make($data), 200);
     }
     /**
      * Remove the specified resource from storage.
@@ -73,7 +74,7 @@ class SubscriptionController extends Controller
     {
         $this->authorize('restore', $subscription);
         $data = $this->subscriptionService->restore($subscription);
-        return $this->successMessage('Successfully Restored Subscription', ['subscription' => $data], 200);
+        return $this->successMessage('Successfully Restored Subscription', SubscriptionResource::make($data), 200);
     }
     /**
      * Remove the specified resource from storage.
@@ -96,7 +97,7 @@ class SubscriptionController extends Controller
         $this->authorize('getAllTrashed', Subscription::class);
         $filters = $request->only(['price_id', 'company_id', 'status']);
         $subscriptions = $this->subscriptionService->getAllTrashed($filters);
-        return $this->successMessage('Successfully Retrieved Subscriptions', ['subscriptions' => $subscriptions], 200);
+        return $this->successMessage('Successfully Retrieved Subscriptions', SubscriptionResource::collection($subscriptions), 200);
     }
     /**
      * Display the specified trashed resource.
@@ -107,7 +108,7 @@ class SubscriptionController extends Controller
     {
         $this->authorize('getTrashed', $subscription);
         $data = $this->subscriptionService->getTrashed($subscription);
-        return $this->successMessage('Successfully Retrieved Subscription', ['subscription' => $data], 200);
+        return $this->successMessage('Successfully Retrieved Subscription', [SubscriptionResource::make($data)], 200);
     }
     /**
      * Summary of forceDeleteAllSubscriptions
@@ -134,6 +135,6 @@ class SubscriptionController extends Controller
     {
         $this->authorize('reNew', $subscription);
         $data = $this->subscriptionService->renew($subscription, $request->validated());
-        return $this->successMessage('Successfully Renewed Subscription ', ['subscription' => $data], 200);
+        return $this->successMessage('Successfully Renewed Subscription ', SubscriptionResource::make($data), 200);
     }
 }

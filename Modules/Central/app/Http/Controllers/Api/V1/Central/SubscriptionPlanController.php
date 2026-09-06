@@ -10,6 +10,7 @@ use Modules\Central\Services\SubscriptionPlanService;
 use Modules\Central\Http\Requests\Api\V1\Central\StoreSubscriptionPlanRequest;
 use Modules\Central\Http\Requests\Api\V1\Central\UpdateSubscriptionPlanRequest;
 use Modules\Central\Models\SubscriptionPlan;
+use Modules\Central\Transformers\SubscriptionPlanResource;
 
 class SubscriptionPlanController extends Controller
 {
@@ -30,7 +31,7 @@ class SubscriptionPlanController extends Controller
         $this->authorize('viewAny', SubscriptionPlan::class);
         $filters = $request->only(['name', 'description', 'is_active']);
         $plans = $this->subscriptionPlanService->getAllPlans($filters);
-        return $this->successMessage('Successfully retrieved subscription plans', ['plans' => $plans], 200);
+        return $this->successMessage('Successfully retrieved subscription plans', SubscriptionPlanResource::collection($plans), 200);
     }
 
     /**
@@ -42,7 +43,7 @@ class SubscriptionPlanController extends Controller
     {
         $this->authorize('create', SubscriptionPlan::class);
         $plan = $this->subscriptionPlanService->store($request->validated());
-        return $this->successMessage('Successfully created subscription plan', ['plan' => $plan], 201);
+        return $this->successMessage('Successfully created subscription plan', SubscriptionPlanResource::make($plan), 201);
     }
 
     /**
@@ -54,7 +55,7 @@ class SubscriptionPlanController extends Controller
     {
         $this->authorize('view', $subscriptionPlan);
         $data = $this->subscriptionPlanService->get($subscriptionPlan);
-        return $this->successMessage('Successfully retrieved subscription plan', ['plan' => $data], 200);
+        return $this->successMessage('Successfully retrieved subscription plan', SubscriptionPlanResource::make($data), 200);
     }
 
     /**
@@ -67,7 +68,7 @@ class SubscriptionPlanController extends Controller
     {
         $this->authorize('update', $subscriptionPlan);
         $plan = $this->subscriptionPlanService->update($subscriptionPlan, $request->validated());
-        return $this->successMessage('Successfully updated subscription plan', ['plan' => $plan], 200);
+        return $this->successMessage('Successfully updated subscription plan', SubscriptionPlanResource::make($plan), 200);
     }
 
     /**
@@ -91,7 +92,7 @@ class SubscriptionPlanController extends Controller
     {
         $this->authorize('restore', $subscriptionPlan);
         $plan = $this->subscriptionPlanService->restore($subscriptionPlan);
-        return $this->successMessage('Successfully restored subscription plan', ['plan' => $plan], 200);
+        return $this->successMessage('Successfully restored subscription plan', SubscriptionPlanResource::make($plan), 200);
     }
     /**
      * Remove the specified resource from storage.
@@ -142,7 +143,7 @@ class SubscriptionPlanController extends Controller
             'is_active'
         ]);
         $plans = $this->subscriptionPlanService->viewTrashedPlans($filters);
-        return $this->successMessage('Successfully retrieved trashed subscription plans', ['plans' => $plans], 200);
+        return $this->successMessage('Successfully retrieved trashed subscription plans', SubscriptionPlanResource::collection($plans), 200);
     }
 
     /**
@@ -154,6 +155,6 @@ class SubscriptionPlanController extends Controller
     {
         $this->authorize('viewTrashedPlan', $subscriptionPlan);
         $plan = $this->subscriptionPlanService->viewTrashedPlan($subscriptionPlan);
-        return $this->successMessage('Successfully retrieved trashed subscription plan', ['plan' => $plan], 200);
+        return $this->successMessage('Successfully retrieved trashed subscription plan', SubscriptionPlanResource::make($plan), 200);
     }
 }

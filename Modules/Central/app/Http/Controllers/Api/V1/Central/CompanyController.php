@@ -9,7 +9,7 @@ use Modules\Central\Services\CompanyService;
 use Modules\Central\Http\Requests\Api\V1\Central\Company\StoreCompanyRequest;
 use Modules\Central\Http\Requests\Api\V1\Central\Company\UpdateCompanyRequest;
 use Modules\Central\Models\Company;
-
+use Modules\Central\Transformers\CompanyResource;
 
 class CompanyController extends Controller
 {
@@ -25,7 +25,7 @@ class CompanyController extends Controller
         $this->authorize('viewAny', Company::class);
         $filters = $request->only(['owner_id', 'name', 'subdomain', 'is_active']);
         $companies = $this->companyService->getAllCompanies($filters);
-        return $this->successMessage('Successfully retrieved companies', ['companies' => $companies], 200);
+        return $this->successMessage('Successfully retrieved companies', CompanyResource::collection($companies), 200);
     }
 
     /**
@@ -37,7 +37,7 @@ class CompanyController extends Controller
 
         $validatedData = $request->validated();
         $company = $this->companyService->store($validatedData);
-        return $this->successMessage('Successfully created company', ['company' => $company], 201);
+        return $this->successMessage('Successfully created company', CompanyResource::make($company), 201);
     }
     /**
      * Show the specified resource.
@@ -46,7 +46,7 @@ class CompanyController extends Controller
     {
         $this->authorize('view', $company);
         $data = $this->companyService->getCompany($company);
-        return $this->successMessage('Successfully retrieved company', ['company' => $data], 200);
+        return $this->successMessage('Successfully retrieved company', CompanyResource::make($data), 200);
     }
 
     /**
@@ -57,7 +57,7 @@ class CompanyController extends Controller
         $this->authorize('update', $company);
         $validatedData = $request->validated();
         $updatedCompany = $this->companyService->update($company, $validatedData);
-        return $this->successMessage('Successfully updated company', ['company' => $updatedCompany], 200);
+        return $this->successMessage('Successfully updated company', CompanyResource::make($updatedCompany), 200);
     }
 
     /**
@@ -76,7 +76,7 @@ class CompanyController extends Controller
     {
         $this->authorize('restore', $company);
         $data = $this->companyService->restore($company);
-        return $this->successMessage('Successfully restored company', ['company' => $data], 200);
+        return $this->successMessage('Successfully restored company', CompanyResource::make($data), 200);
     }
 
     /**
@@ -99,7 +99,7 @@ class CompanyController extends Controller
         $this->authorize('viewAnyTrashed', Company::class);
         $filters = $request->only(['owner_id', 'name', 'subdomain', 'is_active']);
         $trashedCompanies = $this->companyService->getAllTrashedCompanies($filters);
-        return $this->successMessage('Successfully retrieved trashed companies', ['companies' => $trashedCompanies], 200);
+        return $this->successMessage('Successfully retrieved trashed companies', CompanyResource::collection($trashedCompanies), 200);
     }
 
     /**
@@ -111,7 +111,7 @@ class CompanyController extends Controller
     {
         $this->authorize('viewTrashed', $company);
         $trashedCompany = $this->companyService->getTrashedCompany($company);
-        return $this->successMessage('Successfully retrieved trashed company', ['company' => $trashedCompany], 200);
+        return $this->successMessage('Successfully retrieved trashed company', CompanyResource::make($trashedCompany), 200);
     }
 
     /**

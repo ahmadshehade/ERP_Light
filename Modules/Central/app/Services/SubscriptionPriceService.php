@@ -60,7 +60,7 @@ class SubscriptionPriceService
      * @param array $data
      * @return array
      */
-    public function getAll(array $data = []): array
+    public function getAll(array $data = [])
     {
         $page = request()->integer('page', 1);
         $perPage = request()->integer('per_page', 15);
@@ -72,7 +72,7 @@ class SubscriptionPriceService
                     $this->filterData($prices, $data);
                 }
                 $this->sortData($prices, $data, ['plan_id', 'created_at', 'price', 'trail_days']);
-                return $prices->paginate(15)->toArray();
+                return $prices->paginate(15);
             });
     }
 
@@ -371,7 +371,7 @@ class SubscriptionPriceService
      * @param array $data
      * @return array
      */
-    public function getTrashedSubscriptionPrices(array $data = []): array
+    public function getTrashedSubscriptionPrices(array $data = [])
     {
         $page = request()->integer('page', 1);
         $perPage = request()->integer('per_page', 15);
@@ -383,7 +383,7 @@ class SubscriptionPriceService
                     $this->filterData($prices, $data);
                 }
                 $this->sortData($prices, $data, ['plan_id', 'created_at', 'price', 'trail_days']);
-                return $prices->paginate(15)->toArray();
+                return $prices->paginate(15);
             });
     }
 

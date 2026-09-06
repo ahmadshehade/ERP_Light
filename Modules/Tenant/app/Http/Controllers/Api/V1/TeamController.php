@@ -9,6 +9,7 @@ use Modules\Tenant\Http\Requests\Api\V1\Teams\StoreTeamRequest;
 use Modules\Tenant\Http\Requests\Api\V1\Teams\UpdateTeamRequest;
 use Modules\Tenant\Models\Team;
 use Modules\Tenant\Services\Team\TeamService;
+use Modules\Tenant\Transformers\TeamResource;
 
 class TeamController extends Controller
 {
@@ -23,7 +24,7 @@ class TeamController extends Controller
         $this->authorize('viewAny', Team::class);
         $fiters = $request->only(['name', 'is_active', 'description']);
         $teams = $this->service->getAll($fiters);
-        return $this->successMessage('Suuccessfully Retrieved Teams', ['teams' => $teams], 200);
+        return $this->successMessage('Suuccessfully Retrieved Teams', TeamResource::collection($teams), 200);
     }
 
 
@@ -35,7 +36,7 @@ class TeamController extends Controller
     {
         $this->authorize('create', Team::class);
         $team = $this->service->store($request->validated());
-        return  $this->successMessage('Suuccessfully Created Team', ['team' => $team], 201);
+        return  $this->successMessage('Suuccessfully Created Team', TeamResource::make($team), 201);
     }
 
     /**
@@ -45,7 +46,7 @@ class TeamController extends Controller
     {
         $this->authorize('view', $team);
         $data = $this->service->get($team);
-        return  $this->successMessage('Suuccessfully Retrieved Team', ['team' => $data], 200);
+        return  $this->successMessage('Suuccessfully Retrieved Team', TeamResource::make($data), 200);
     }
 
 
@@ -57,7 +58,7 @@ class TeamController extends Controller
     {
         $this->authorize('update', $team);
         $data = $this->service->update($request->validated(), $team);
-        return  $this->successMessage('Suuccessfully Updated Team', ['team' => $data], 200);
+        return  $this->successMessage('Suuccessfully Updated Team', TeamResource::make($data), 200);
     }
 
     /**

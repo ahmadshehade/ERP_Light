@@ -11,6 +11,7 @@ use Modules\Tenant\Http\Requests\Api\V1\Projects\UpdateProjectRequest;
 use Modules\Tenant\Models\Project;
 use Modules\Tenant\Services\Project\ProjectService;
 use Modules\Tenant\Services\Project\ProjectStatusService;
+use Modules\Tenant\Transformers\ProjectResource;
 
 class ProjectController extends Controller
 {
@@ -32,7 +33,7 @@ class ProjectController extends Controller
             'is_active',
         ]);
         $projects = $this->projectService->getAll($fiters);
-        return $this->successMessage('Suuccessfully Retrieved Projects', ['projects' => $projects], 200);
+        return $this->successMessage('Suuccessfully Retrieved Projects', ProjectResource::collection($projects), 200);
     }
 
 
@@ -43,7 +44,7 @@ class ProjectController extends Controller
     {
         $this->authorize('create', Project::class);
         $project = $this->projectService->store($request->validated());
-        return $this->successMessage('Suuccessfully Created Project', ['project' => $project], 201);
+        return $this->successMessage('Suuccessfully Created Project', ProjectResource::make($project), 201);
     }
 
     /**
@@ -53,7 +54,7 @@ class ProjectController extends Controller
     {
         $this->authorize('view', $project);
         $data = $this->projectService->get($project);
-        return $this->successMessage('Suuccessfully Retrieved Project', ['project' => $data], 200);
+        return $this->successMessage('Suuccessfully Retrieved Project', ProjectResource::make($data), 200);
     }
 
 
@@ -64,7 +65,7 @@ class ProjectController extends Controller
     {
         $this->authorize('update', $project);
         $data = $this->projectService->update($request->validated(), $project);
-        return $this->successMessage('Suuccessfully Updated Project', ['project' => $data], 200);
+        return $this->successMessage('Suuccessfully Updated Project', ProjectResource::make($data), 200);
     }
 
     /**
@@ -84,7 +85,7 @@ class ProjectController extends Controller
     {
         $this->authorize('restore', $project);
         $data = $this->projectService->restore($project);
-        return $this->successMessage('Suuccessfully Restored Project', ['project' => $data], 200);
+        return $this->successMessage('Suuccessfully Restored Project', ProjectResource::make($data), 200);
     }
 
     /**
@@ -104,7 +105,7 @@ class ProjectController extends Controller
     {
         $this->authorize('getTrashed', $project);
         $data = $this->projectService->getTrashed($project);
-        return $this->successMessage('Suuccessfully Restored Project', ['project' => $data], 200);
+        return $this->successMessage('Suuccessfully Restored Project', ProjectResource::make($data), 200);
     }
 
     /**
@@ -115,7 +116,7 @@ class ProjectController extends Controller
         $this->authorize('getAllTrashed', Project::class);
         $filters = $request->only(['name', 'description', 'status', 'priority', 'start_date', 'end_date', 'is_active']);
         $data = $this->projectService->getAllTrashed($filters);
-        return $this->successMessage('Suuccessfully Restored Project', ['project' => $data], 200);
+        return $this->successMessage('Suuccessfully Restored Project', ProjectResource::collection($data), 200);
     }
 
     /**
@@ -125,7 +126,7 @@ class ProjectController extends Controller
     {
         $this->authorize('restoreAll', Project::class);
         $data = $this->projectService->restoreAll();
-        return $this->successMessage('Suuccessfully Restored Project', ['project' => $data], 200);
+        return $this->successMessage('Suuccessfully Restored Project', ProjectResource::make($data), 200);
     }
 
     /**
@@ -135,7 +136,7 @@ class ProjectController extends Controller
     {
         $this->authorize('forceDeleteAll', Project::class);
         $data = $this->projectService->forceDeleteAll();
-        return $this->successMessage('Suuccessfully Restored Project', ['project' => $data], 200);
+        return $this->successMessage('Suuccessfully Restored Project', ProjectResource::make($data), 200);
     }
 
 
@@ -148,7 +149,7 @@ class ProjectController extends Controller
     {
         $this->authorize('onHold', $project);
         $data = $this->state->hold($project);
-        return $this->successMessage('Suuccessfully On Hold Project', ['project' => $data], 200);
+        return $this->successMessage('Suuccessfully On Hold Project', ProjectResource::make($data), 200);
     }
 
 
@@ -161,7 +162,7 @@ class ProjectController extends Controller
     {
         $this->authorize('resume', $project);
         $data = $this->state->resume($project);
-        return $this->successMessage('Suuccessfully Resume Project', ['project' => $data], 200);
+        return $this->successMessage('Suuccessfully Resume Project', ProjectResource::make($data), 200);
     }
 
     /**
@@ -173,7 +174,7 @@ class ProjectController extends Controller
     {
         $this->authorize('cancel', $project);
         $data = $this->state->cancel($project);
-        return $this->successMessage('Suuccessfully Cancel Project', ['project' => $data], 200);
+        return $this->successMessage('Suuccessfully Cancel Project', ProjectResource::make($data), 200);
     }
 
     /**
@@ -185,6 +186,6 @@ class ProjectController extends Controller
     {
         $this->authorize('complete', $project);
         $data = $this->state->complete($project);
-        return $this->successMessage('Suuccessfully Complete Project', ['project' => $data], 200);
+        return $this->successMessage('Suuccessfully Complete Project', ProjectResource::make($data), 200);
     }
 }

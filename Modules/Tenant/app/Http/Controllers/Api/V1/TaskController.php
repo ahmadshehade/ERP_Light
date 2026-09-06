@@ -11,6 +11,7 @@ use Modules\Tenant\Http\Requests\Api\V1\Tasks\UpdateTaskRequest;
 use Modules\Tenant\Models\Task;
 use Modules\Tenant\Services\Task\TaskActionService;
 use Modules\Tenant\Services\Task\TaskService;
+use Modules\Tenant\Transformers\TaskResource;
 
 class TaskController extends Controller
 {
@@ -24,9 +25,9 @@ class TaskController extends Controller
     public function index(Request $request)
     {
         $this->authorize('viewAny', Task::class);
-        $filters = $request->only(['name', 'is_active', 'description', 'team_id', 'project_id']);
+        $filters = $request->only(['title', 'is_active', 'description', 'team_id', 'project_id']);
         $tasks = $this->taskService->getAll($filters);
-        return $this->successMessage('Successfully retrieved tasks', ['tasks' => $tasks], 200);
+        return $this->successMessage('Successfully retrieved tasks', TaskResource::collection($tasks), 200);
     }
 
 
@@ -38,7 +39,7 @@ class TaskController extends Controller
     {
         $this->authorize('create', Task::class);
         $task = $this->taskService->store($request->validated());
-        return $this->successMessage('Successfully created task', ['task' => $task], 201);
+        return $this->successMessage('Successfully created task', TaskResource::make($task), 201);
     }
 
     /**
@@ -48,7 +49,7 @@ class TaskController extends Controller
     {
         $this->authorize('view', $task);
         $data = $this->taskService->get($task);
-        return $this->successMessage('Successfully retrieved task', ['task' => $data], 200);
+        return $this->successMessage('Successfully retrieved task', TaskResource::make($data), 200);
     }
 
 
@@ -60,7 +61,7 @@ class TaskController extends Controller
     {
         $this->authorize('update', $task);
         $task = $this->taskService->update($request->validated(), $task);
-        return $this->successMessage('Successfully updated task', ['task' => $task], 200);
+        return $this->successMessage('Successfully updated task', TaskResource::make($task), 200);
     }
 
     /**
@@ -80,7 +81,7 @@ class TaskController extends Controller
     {
         $this->authorize('restore', $task);
         $task = $this->taskService->restore($task);
-        return $this->successMessage('Successfully restored task', ['task' => $task], 200);
+        return $this->successMessage('Successfully restored task', TaskResource::make($task), 200);
     }
 
     /**
@@ -100,7 +101,7 @@ class TaskController extends Controller
     {
         $this->authorize('viewTrashed', Task::class);
         $task = $this->taskService->getTrashed($task);
-        return $this->successMessage('Successfully retrieved trashed task', ['task' => $task], 200);
+        return $this->successMessage('Successfully retrieved trashed task', TaskResource::make($task), 200);
     }
 
     /**
@@ -109,9 +110,9 @@ class TaskController extends Controller
     public function getTrashedTasks(): JsonResponse
     {
         $this->authorize('viewAllTrashed', Task::class);
-        $filters = request()->only(['name', 'is_active', 'description', 'team_id', 'project_id']);
+        $filters = request()->only(['title', 'is_active', 'description', 'team_id', 'project_id']);
         $tasks = $this->taskService->getAllTrashed($filters);
-        return $this->successMessage('Successfully retrieved trashed tasks', ['tasks' => $tasks], 200);
+        return $this->successMessage('Successfully retrieved trashed tasks', TaskResource::collection($tasks), 200);
     }
 
     /**
@@ -141,7 +142,7 @@ class TaskController extends Controller
     {
         $this->authorize('cancelTask', $task);
         $task = $this->taskAction->cancelTask($task);
-        return $this->successMessage('Successfully cancelled task', ['task' => $task], 200);
+        return $this->successMessage('Successfully cancelled task', TaskResource::make($task), 200);
     }
 
     /**
@@ -151,7 +152,7 @@ class TaskController extends Controller
     {
         $this->authorize('completeTask', $task);
         $task = $this->taskAction->completeTask($task);
-        return $this->successMessage('Successfully completed task', ['task' => $task], 200);
+        return $this->successMessage('Successfully completed task', TaskResource::make($task), 200);
     }
 
     /**
@@ -161,6 +162,6 @@ class TaskController extends Controller
     {
         $this->authorize('onHoldTask', $task);
         $task = $this->taskAction->onHoldTask($task);
-        return $this->successMessage('Successfully on hold task', ['task' => $task], 200);
+        return $this->successMessage('Successfully on hold task', TaskResource::make($task), 200);
     }
 }

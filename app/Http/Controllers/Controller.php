@@ -8,7 +8,7 @@ abstract class Controller
     /**
      * Success message
      */
-    public function successMessage(string $message, array $data, int $code): \Illuminate\Http\JsonResponse
+    public function successMessage(string $message, mixed $data, int $code): \Illuminate\Http\JsonResponse
     {
         return response()->json([
             'success' => true,
