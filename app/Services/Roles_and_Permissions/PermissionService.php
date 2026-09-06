@@ -44,8 +44,8 @@ class PermissionService
 
                     $this->filterData($query, $data);
                 }
-
-                return $query->paginate(15);
+                $this->sortData($query, $data, ['name', 'created_at', 'updated_at']);
+                return $query->paginate(15)->toArray();
             });
     }
 

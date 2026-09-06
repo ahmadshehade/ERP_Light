@@ -27,16 +27,16 @@ class TeamService
      * @param string $prefix
      * @return string
      */
-    protected function genKey(array $data = [], string $prefix = '')
+    protected function genKey(array $data = [], string $prefix = '', int $page = 1, int $perPage = 15)
     {
-
-        return implode('_', [
-            tenant('id'),
-            Auth::id(),
-            $prefix,
-            NameOfCache::TEAM->value,
-            md5(json_encode($data)),
-        ]);
+        $user = Auth::user();
+        $userKey = $user ? $user->id . $prefix . tenant('id') . implode("_" . $user->roles->pluck("name")->toArray()) : "";
+        $cacheData = [
+            'filters' => $data,
+            'page' => $page,
+            'perPage' => $perPage
+        ];
+        return  $userKey . "_" . NameOfCache::TEAM->value . "_" . md5(json_encode($cacheData));
     }
 
     /**
@@ -52,7 +52,9 @@ class TeamService
      */
     public function getAll(array $data = [])
     {
-        $cacheKey = $this->genKey($data, 'no_trashed');
+        $page = request()->integer('page', 1);
+        $perPage = request()->integer('perPage', 15);
+        $cacheKey = $this->genKey($data, 'no_trashed', $page, $perPage);
         return Cache::tags(NameOfCache::TEAM->value)->remember($cacheKey, self::TIME_TTL, function () use ($data) {
             $teams = Team::active(Auth::user())->with('media');
             if (!empty($data)) {

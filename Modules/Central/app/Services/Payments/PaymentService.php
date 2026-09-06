@@ -24,17 +24,18 @@ class PaymentService
      * @param array $data
      * @return string
      */
-    protected function genKey(string $prefix, array $data = []): string
+    protected function genKey(string $prefix, array $data = [], int $page = 1, int $perPage = 15): string
     {
         $user = Auth::user();
         $userKey = $user
             ? $user->id . implode('_', $user->roles->pluck('name')->toArray())
             : '';
-        $cacheKey = $userKey
-            . $prefix
-            . NameOfCache::PAYMENT->value
-            . md5(json_encode($data));
-        return $cacheKey;
+        $cacheData = [
+            'filters' => $data,
+            'page' => $page,
+            'perPage' => $perPage,
+        ];
+        return $userKey . "_" . NameOfCache::PAYMENT->value . "_" . md5(json_encode($cacheData));
     }
 
     /**
@@ -53,7 +54,9 @@ class PaymentService
      */
     public function getAll(array $data = []): array
     {
-        $cacheKey = $this->genKey("_no_trashed_", $data);
+        $page = request()->integer('page', 1);
+        $perPage = request()->integer('per_page', 15);
+        $cacheKey = $this->genKey("_no_trashed_", $data, $page, $perPage);
         return Cache::tags(NameOfCache::PAYMENT->value)->remember($cacheKey, self::TIME_TTL, function () use ($data) {
             $payments = Payment::query()->ownerPaymnets(Auth::user())->with('subscription.company.owner');
             if (!empty($data)) {
@@ -229,7 +232,9 @@ class PaymentService
      */
     public function getAllTrashed(array $data = []): array
     {
-        $cacheKey = $this->genKey("_trashed_", $data);
+        $page = request()->integer('page', 1);
+        $perPage = request()->integer('per_page', 15);
+        $cacheKey = $this->genKey("_trashed_", $data, $page, $perPage);
         return Cache::tags(NameOfCache::PAYMENT->value)->remember($cacheKey, self::TIME_TTL, function () use ($data) {
             $payments = Payment::onlyTrashed()->with('subscription.company.owner');
             if (!empty($data)) {

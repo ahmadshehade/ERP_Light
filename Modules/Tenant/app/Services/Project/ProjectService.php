@@ -30,16 +30,12 @@ class ProjectService
      * @param array $data
      * @return string
      */
-    protected function genKey(array $data = [], string $prefix = ''): string
+    protected function genKey(array $data = [], string $prefix = '', int $page = 1, int $perPage = 15): string
     {
         $user = Auth::user();
-        return implode('_', [
-            tenant('id'),
-            $user->id,
-            $prefix,
-            NameOfCache::PROJECT->value,
-            md5(json_encode($data)),
-        ]);
+        $userKey = $user ? $user->id . tenant('id') . $prefix . implode("_", $user->roles->pluck('name')->toArray()) : "";
+        $cacheData = ['filters' => $data, 'page' => $page, 'per_page' => $perPage];
+        return $userKey . NameOfCache::PROJECT->value . md5(json_encode($cacheData));
     }
 
     /**
@@ -58,12 +54,15 @@ class ProjectService
      */
     public function getAll(array $data = []): array
     {
-        $cacheKey = $this->genKey($data, 'no_trashed');
+        $page = request()->integer('page', 1);
+        $perPage = request()->integer('per_page', 15);
+        $cacheKey = $this->genKey($data, 'no_trashed', $page, $perPage);
         return Cache::tags(NameOfCache::PROJECT->value)->remember($cacheKey, self::TIME_TTL, function () use ($data) {
             $projects = Project::active(Auth::user())->with('tasks');
             if (!empty($data)) {
                 $this->filterData($projects, $data);
             }
+            $this->sortData($projects, $data, ['name', 'description', 'created_at', 'start_date', 'end_date', 'priority', 'status']);
             return $projects->paginate(15)->toArray();
         });
     }
@@ -270,12 +269,15 @@ class ProjectService
      */
     public function getAllTrashed(array $data): array
     {
-        $cacheKey = $this->genKey($data, 'trashed');
+        $page = request()->integer('page', 1);
+        $perPage = request()->integer('per_page', 15);
+        $cacheKey = $this->genKey($data, 'trashed', $page, $perPage);
         return Cache::tags(NameOfCache::PROJECT->value)->remember($cacheKey, self::TIME_TTL, function () use ($data) {
             $projects = Project::onlyTrashed()->with('media', 'tasks');
             if (!empty($data)) {
                 $this->filterData($projects, $data);
             }
+            $this->sortData($projects, $data, ['name', 'description', 'created_at', 'start_date', 'end_date', 'priority', 'status']);
             return $projects->paginate(15)->toArray();
         });
     }

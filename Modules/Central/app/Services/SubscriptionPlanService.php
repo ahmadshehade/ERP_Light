@@ -24,11 +24,29 @@ class SubscriptionPlanService
      * @param array $data
      * @return string
      */
-    public function genKey(array $data = [], string $prefix = ""): string
-    {
+    public function genKey(
+        array $data = [],
+        string $prefix = "",
+        int $page = 1,
+        int $perPage = 15
+    ): string {
         $user = Auth::user();
-        $userKey = $user ? $user->id . "_" . $prefix . implode('_', $user->roles->pluck('name')->toArray()) : '';
-        return $userKey . "_" . NameOfCache::SUBSCRIPTION_PLAN->value . "_" . md5(json_encode($data));
+        $userKey = $user
+            ? $user->id . "_" . $prefix . implode(
+                "_",
+                $user->roles->pluck('name')->toArray()
+            )
+            : '';
+        $cacheData = [
+            'filters' => $data,
+            'page' => $page,
+            'per_page' => $perPage,
+        ];
+        return $userKey
+            . "_"
+            . NameOfCache::SUBSCRIPTION_PLAN->value
+            . "_"
+            . md5(json_encode($cacheData));
     }
 
     /**
@@ -49,14 +67,35 @@ class SubscriptionPlanService
      */
     public function getAllPlans(array $data = []): array
     {
-        $cacheKey = $this->genKey($data, "_no_trashed_");
-        return Cache::tags(NameOfCache::SUBSCRIPTION_PLAN->value)->remember($cacheKey, self::CACHE_TTL, function () use ($data) {
-            $plans = SubscriptionPlan::query()->active(Auth::user());
-            if (! empty($data)) {
-                $this->filterData($plans, $data);
-            }
-            return $plans->paginate(15)->toArray();
-        });
+        $page = request()->integer('page', 1);
+        $perPage = request()->integer('per_page', 15);
+        $cacheKey = $this->genKey(
+            $data,
+            "_no_trashed_",
+            $page,
+            $perPage
+        );
+
+        return Cache::tags(NameOfCache::SUBSCRIPTION_PLAN->value)
+            ->remember(
+                $cacheKey,
+                self::CACHE_TTL,
+                function () use ($data, $perPage) {
+                    $plans = SubscriptionPlan::query()
+                        ->active(Auth::user());
+                    if (!empty($data)) {
+                        $this->filterData($plans, $data);
+                    }
+                    $this->sortData(
+                        $plans,
+                        $data,
+                        ['name', 'created_at']
+                    );
+                    return $plans
+                        ->paginate($perPage)
+                        ->toArray();
+                }
+            );
     }
 
     /**
@@ -207,12 +246,20 @@ class SubscriptionPlanService
     public  function viewTrashedPlans(array $data = []): array
     {
 
-        $cacheKey = $this->genKey($data, "_trashed_");
+        $page = request()->integer('page', 1);
+        $perPage = request()->integer('per_page', 15);
+        $cacheKey = $this->genKey(
+            $data,
+            "_no_trashed_",
+            $page,
+            $perPage
+        );
         return Cache::tags(NameOfCache::SUBSCRIPTION_PLAN->value)->remember($cacheKey, self::CACHE_TTL, function () use ($data) {
             $plans = SubscriptionPlan::query()->onlyTrashed()->active(Auth::user());
             if (! empty($data)) {
                 $this->filterData($plans, $data);
             }
+            $this->sortData($plans, $data, ['name', 'created_at']);
             return $plans->paginate(15)->toArray();
         });
     }

@@ -43,6 +43,7 @@ class UserService
                 if (!empty($filters)) {
                     $this->filterData($query, $filters);
                 }
+                $this->sortData($query, $filters, ['name', 'created_at', 'updated_at']);
                 return $query->paginate(15)->toArray();
             });
     }
@@ -138,6 +139,7 @@ class UserService
                 if (! empty($filters)) {
                     $this->filterData($query, $filters);
                 }
+                $this->sortData($query, $filters, ['name', 'created_at', 'updated_at']);
                 return $query->paginate(15)->toArray();
             });
     }

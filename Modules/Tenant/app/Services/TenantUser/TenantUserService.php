@@ -24,19 +24,20 @@ class TenantUserService
      *@Prama String $prefix
      *@return string
      */
-    protected function genKey(array $data = [], string $prefix = ''): string
+    protected function genKey(array $data = [], string $prefix = '', int $page = 1, int $perPage = 15): string
     {
         $user = Auth::user();
 
         $userKey = $user
-            ? $user->id . "_" . $prefix . "_" .
+            ? $user->id . "_" . $prefix . "_" . tenant('id') .
             implode("_", $user->roles->pluck('name')->toArray())
             : "";
+        $cacheData = ['filters' => $data, 'page' => $page, 'per_page' => $perPage];
 
         return $userKey .
             NameOfCache::TENANT_USER->value .
             "_" .
-            md5(json_encode($data));
+            md5(json_encode($cacheData));
     }
 
     /**
@@ -55,14 +56,18 @@ class TenantUserService
      */
     public function getAll(array $data = []): array
     {
-        $cacheKey = $this->genKey($data, "all_TenantUser_");
+        $page = request()->integer('page', 1);
+        $perPage = request()->integer('perPage', 15);
+        $cacheKey = $this->genKey($data, "all_TenantUser_", $page, $perPage);
 
         return Cache::tags(NameOfCache::TENANT_USER->value)
+
             ->remember($cacheKey, self::TIME_TTL, function () use ($data) {
                 $users = TenantUser::query()->with('user', 'departments', 'positions', 'teams');
                 if (!empty($data)) {
                     $this->filterData($users, $data);
                 }
+                $this->sortData($users, $data, ['user_id', 'created_at']);
                 return $users
                     ->with('user')
                     ->paginate(15)

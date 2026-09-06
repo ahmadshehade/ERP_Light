@@ -23,15 +23,16 @@ class RoleService
      * @pram array $data
      * @return string
      */
-    private function genKey(array $data = []): string
+    private function genKey(array $data = [], int $page = 1, int $perPage = 15): string
     {
         $user = Auth::user();
-        return implode('_', [
-            tenant('id'),
-            $user->id,
-            NameOfCache::TENANT_ROLE->value,
-            md5(json_encode($data)),
-        ]);
+        $userKey = $user ? $user->id . implode("_", $user->roles->pluck('name')->toArray()) : "";
+        $cacheData = [
+            'filters' => $data,
+            'page' => $page,
+            'per_page' => $perPage
+        ];
+        return $userKey . "_" . NameOfCache::TENANT_ROLE->value . "_" . md5(json_encode($cacheData));
     }
 
     /**
@@ -41,8 +42,9 @@ class RoleService
      */
     public function getAll(array $data = [])
     {
-        $cacheKey = $this->genKey($data);
-
+        $page = request()->integer('page', 1);
+        $perPage = request()->integer('perPage', 15);
+        $cacheKey = $this->genKey($data, $page, $perPage);
         return Cache::tags([
             NameOfCache::TENANT_ROLE->value
         ])->remember(
@@ -54,6 +56,7 @@ class RoleService
                 if (!empty($data)) {
                     $this->filterData($roles, $data);
                 }
+                $this->sortData($roles, $data, ['name', 'created_at']);
                 return $roles->paginate(15);
             }
         );

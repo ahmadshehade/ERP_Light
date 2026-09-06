@@ -15,8 +15,7 @@ use Modules\Central\Jobs\DeleteCompanyJob;
 use Modules\Central\Jobs\ProccessCompanyMediaJob;
 use Modules\Central\Models\Company;
 use Modules\Central\Services\Companies\CompanyNotification;
-use Modules\Central\Services\Tenant\TenantProvisioningService;
-use RuntimeException;
+
 
 class CompanyService
 {
@@ -34,7 +33,9 @@ class CompanyService
      */
     protected function genKey(
         array $data = [],
-        string $prefix = ""
+        string $prefix = "",
+        int $page = 1,
+        int $perPage = 15
     ): string {
         $user = Auth::user();
 
@@ -45,11 +46,12 @@ class CompanyService
             . implode("_", $user->roles->pluck('name')->toArray())
             : "";
 
-        return $userKey
-            . "_"
-            . NameOfCache::COMPANY->value
-            . "_"
-            . md5(json_encode($data));
+        $caheData = [
+            'filters' => $data,
+            'page' => $page,
+            'per_page' => $perPage
+        ];
+        return $userKey . "_" . NameOfCache::COMPANY->value . "_" . md5(json_encode($caheData));
     }
 
     /**
@@ -65,8 +67,9 @@ class CompanyService
      */
     public function getAllCompanies(array $data = []): array
     {
-        $cacheKey = $this->genKey($data, "_no_trashed_");
-
+        $page = request()->integer('page', 1);
+        $perPage = request()->integer('per_page', 15);
+        $cacheKey = $this->genKey($data, "_no_trashed_", $page, $perPage);
         return Cache::tags(NameOfCache::COMPANY->value)
             ->remember(
                 $cacheKey,
@@ -80,6 +83,7 @@ class CompanyService
                     if (!empty($data)) {
                         $this->filterData($query, $data);
                     }
+                    $this->sortData($query, $data, ['name', 'subdomain', 'max_users', 'created_at']);
                     return $query->paginate(15)->toArray();
                 }
             );
@@ -284,7 +288,9 @@ class CompanyService
     public function getAllTrashedCompanies(
         array $data = []
     ): array {
-        $cacheKey = $this->genKey($data, "_trashed_");
+        $page = request()->integer('page', 1);
+        $perPage = request()->integer('per_page', 15);
+        $cacheKey = $this->genKey($data, "_trashed_", $page, $perPage);
         return Cache::tags(NameOfCache::COMPANY->value)
             ->remember(
                 $cacheKey,
@@ -299,6 +305,7 @@ class CompanyService
                     if (!empty($data)) {
                         $this->filterData($query, $data);
                     }
+                    $this->sortData($query, $data, ['name', 'subdomain', 'max_users', 'created_at']);
                     return $query->paginate(15)->toArray();
                 }
             );
@@ -364,7 +371,7 @@ class CompanyService
     {
         $user = Auth::user();
         if (!$user instanceof User) {
-            throw new RuntimeException(
+            throw new BusinessRuleException(
                 'Authenticated user not found.',
                 404
             );

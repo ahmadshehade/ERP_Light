@@ -15,15 +15,18 @@ class PermissionService
     /**
      * Generate cache key
      */
-    private function genKey(array $data = []): string
+    private function genKey(array $data = [], int $page = 1, int $perPage = 15): string
     {
         $user = Auth::user();
-        return implode('_', [
-            tenant('id'),
-            $user->id,
-            NameOfCache::TENANT_PERMISSION->value,
-            md5(json_encode($data)),
-        ]);
+        $userKey = $user
+            ? $user->id . implode('_', $user->roles->pluck('name')->toArray())
+            : '';
+        $cacheData = [
+            'filters' => $data,
+            'page' => $page,
+            'perPage' => $perPage
+        ];
+        return $userKey . "_" . NameOfCache::TENANT_PERMISSION->value . "_" . md5(json_encode($cacheData));
     }
 
     /**
@@ -31,7 +34,9 @@ class PermissionService
      */
     public function getAllPermissions(array $data = [])
     {
-        $cacheKey = $this->genKey($data);
+        $page = request()->integer('page', 1);
+        $perPage = request()->integer('perPage', 15);
+        $cacheKey = $this->genKey($data, $page, $perPage);
 
         return Cache::tags([
             NameOfCache::TENANT_PERMISSION->value
@@ -44,6 +49,7 @@ class PermissionService
                 if (!empty($data)) {
                     $this->filterData($query, $data);
                 }
+                $this->sortData($query, $data, ['name', 'created_at']);
 
                 return $query->paginate(15);
             }

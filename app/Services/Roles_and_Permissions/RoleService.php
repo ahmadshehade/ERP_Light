@@ -42,8 +42,8 @@ class RoleService
             if (! empty($data)) {
                 $this->filterData($roles, $data);
             }
-
-            return $roles->paginate(15);
+            $this->sortData($roles, $data, ['name', 'created_at', 'updated_at']);
+            return $roles->paginate(15)->toArray();
         });
     }
 

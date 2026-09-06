@@ -29,15 +29,16 @@ class TaskService
      * @param string $prefix
      * @return string
      */
-    protected function genKey(array $data = [], string $prefix = ''): string
+    protected function genKey(array $data = [], string $prefix = '', int $page = 1, int $perPage = 15): string
     {
-        return implode('_', [
-            tenant('id'),
-            Auth::id(),
-            $prefix,
-            NameOfCache::TASK->value,
-            md5(json_encode($data)),
-        ]);
+        $user = Auth::user();
+        $userKey = $user ? $user->id . "_" . $prefix . tenant('id') . implode("_", $user->roles->pluck('name')->toArray()) : "";
+        $cacheData = [
+            'filters' => $data,
+            'page' => $page,
+            'per_page' => $perPage
+        ];
+        return $userKey . "_" . NameOfCache::TASK->value . "_" . md5(json_encode($cacheData));
     }
 
     /**
@@ -56,12 +57,15 @@ class TaskService
      */
     public function getAll(array $data = []): array
     {
-        $cacheKey = $this->genKey($data, 'no_trashed');
+        $page = request()->integer('page', 1);
+        $perPage = request()->integer('per_page', 15);
+        $cacheKey = $this->genKey($data, 'no_trashed', $page, $perPage);
         return Cache::tags(NameOfCache::TASK->value)->remember($cacheKey, self::TIME_TTL, function () use ($data) {
             $tasks = Task::active(Auth::user());
             if (!empty($data)) {
                 $this->filterData($tasks, $data);
             }
+            $this->sortData($tasks, $data, ['team_id', 'created_at', 'status', 'priority', 'project_id', 'start_date', 'due_date', 'completed_at']);
             return $tasks->paginate(15)->toArray();
         });
     }
@@ -242,7 +246,9 @@ class TaskService
      */
     public function getAllTrashed(array $data = []): array
     {
-        $caheKey = $this->genKey($data, 'trashed');
+        $page = request()->integer('page', 1);
+        $perPage = request()->integer('perPage', 15);
+        $caheKey = $this->genKey($data, 'trashed', $page, $perPage);
         return Cache::tags(NameOfCache::TASK->value)->remember($caheKey, self::TIME_TTL, function () use ($data) {
             $count = Task::withTrashed()->count();
             if ($count == 0) {
@@ -252,6 +258,7 @@ class TaskService
             if (!empty($data)) {
                 $this->filterData($trashedTask, $data);
             }
+            $this->sortData($trashedTask, $data, ['team_id', 'created_at', 'status', 'priority', 'project_id', 'start_date', 'due_date', 'completed_at']);
             return $trashedTask->paginate(15)->toArray();
         });
     }

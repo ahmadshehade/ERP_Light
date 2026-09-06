@@ -22,16 +22,16 @@ class DepartmentService
 
     public function __construct(public DepartmentNotificationService $departmentService) {}
 
-    private function genKey(array $data = [], string $prefix = ''): string
+    private function genKey(array $data = [], string $prefix = '', int $page = 1, int $perPage = 15): string
     {
         $user = Auth::user();
-        return implode('_', [
-            tenant('id'),
-            $user->id,
-            $prefix,
-            NameOfCache::TENANT_DEPARTMENT->value,
-            md5(json_encode($data)),
-        ]);
+        $userKey = $user ? $user->id . "_" . $prefix . implode("_", $user->roles->pluck('name')->toArray()) : "";
+        $cacheData = [
+            'filters' => $data,
+            'page' => $page,
+            'per_page' => $perPage
+        ];
+        return $userKey . "_" . NameOfCache::TENANT_DEPARTMENT->value . "_" . md5(json_encode($cacheData));
     }
 
 
@@ -45,13 +45,16 @@ class DepartmentService
 
     public function  getAll(array $data = []): array
     {
-        $cacheKey = $this->genKey($data, 'no_trashed');
+        $page = request()->integer('page', 1);
+        $perPage = request()->integer('per_page', 15);
+        $cacheKey = $this->genKey($data, 'no_trashed', $page, $perPage);
         return Cache::tags(NameOfCache::TENANT_DEPARTMENT->value)->remember($cacheKey, self::TIME_TTL, function () use ($data) {
 
             $departments = Department::active(Auth::user())->with(['media']);
             if (!empty($data)) {
                 $this->filterData($departments, $data);
             }
+            $this->sortData($departments, $data, ['name', 'created_at']);
             return $departments->paginate(15)->toArray();
         });
     }
@@ -211,12 +214,15 @@ class DepartmentService
      */
     public function getAllTrashed(array $data = []): array
     {
-        $cacheKey = $this->genKey($data, 'trashed');
+        $page = request()->integer('page', 1);
+        $perPage = request()->integer('per_page', 15);
+        $cacheKey = $this->genKey($data, 'trashed', $page, $perPage);
         return Cache::tags(NameOfCache::TENANT_DEPARTMENT->value)->remember($cacheKey, self::TIME_TTL, function () use ($data) {
             $departments = Department::onlyTrashed()->with(['media']);
             if (!empty($data)) {
                 $this->filterData($departments, $data);
             }
+            $this->sortData($departments, $data, ['name', 'created_at']);
             return $departments->paginate(15)->toArray();
         });
     }

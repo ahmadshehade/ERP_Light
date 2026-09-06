@@ -55,6 +55,7 @@ class ProfileService
                 if (!empty($data)) {
                     $this->filterData($query, $data);
                 }
+                $this->sortData($query, $data, ['created_at', 'updated_at']);
                 return $query->paginate(15)->toArray();
             });
     }

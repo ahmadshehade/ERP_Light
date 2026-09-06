@@ -41,15 +41,18 @@ class SubscriptionService
     /**
      * Generate cache key
      */
-    protected function genKey(array $data = [], string $prefix = ""): string
+    protected function genKey(array $data = [], string $prefix = "", int $page = 1, int $perPage = 15): string
     {
         $user = Auth::user();
         $userKey = $user
             ? $user->id . "_" . $prefix . implode('_', $user->roles->pluck('name')->toArray())
             : '';
-        return $userKey
-            . "_" . NameOfCache::SUBSCRIPTION->value
-            . "_" . md5(json_encode($data));
+        $cacheData = [
+            'filters' => $data,
+            'page' => $page,
+            'perpage' => $perPage
+        ];
+        return $userKey . "_" . NameOfCache::SUBSCRIPTION->value . "_" . md5(json_encode($cacheData));
     }
     /**
      * Flush subscription cache
@@ -63,7 +66,9 @@ class SubscriptionService
      */
     public function getAll(array $data = []): array
     {
-        $cacheKey = $this->genKey($data, '_no_trashed_');
+        $page = request()->integer('page', 1);
+        $perPage = request()->integer('per_page', 15);
+        $cacheKey = $this->genKey($data, '_no_trashed_', $page, $perPage);
         return Cache::tags(NameOfCache::SUBSCRIPTION->value)
             ->remember($cacheKey, 60, function () use ($data) {
 
@@ -75,6 +80,7 @@ class SubscriptionService
                 if (!empty($data)) {
                     $this->filterData($query, $data);
                 }
+                $this->sortData($query, $data, ['company_id', 'status', 'created_at', 'end_date', 'trial_end_date', 'canceled_at', 'start_date']);
                 return $query->paginate(15)->toArray();
             });
     }
@@ -339,7 +345,9 @@ class SubscriptionService
      */
     public function getAllTrashed(array $data = []): array
     {
-        $cacheKey = $this->genKey($data, '_trashed_');
+        $page=request()->integer('page', 1);
+        $perPage=request()->integer('per_page', 15);
+        $cacheKey = $this->genKey($data, '_trashed_',$page,$perPage);
         return Cache::tags(NameOfCache::SUBSCRIPTION->value)
             ->remember($cacheKey, 60, function () use ($data) {
                 $query = Subscription::onlyTrashed()
@@ -351,6 +359,7 @@ class SubscriptionService
                 if (!empty($data)) {
                     $this->filterData($query, $data);
                 }
+                $this->sortData($query, $data, ['company_id', 'status', 'created_at', 'end_date', 'trial_end_date', 'canceled_at', 'start_date']);
                 return $query->paginate(15)->toArray();
             });
     }

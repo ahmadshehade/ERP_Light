@@ -29,11 +29,20 @@ class SubscriptionPriceService
      * @return string
      * @throws \Exception
      */
-    private function genKey(array $data = [], string $prefix = ''): string
-    {
+    private function genKey(
+        array $data = [],
+        string $prefix = '',
+        int $page = 1,
+        int $perPage = 15
+    ): string {
         $user = Auth::user();
         $userKey = $user ? $user->id . "_" . $prefix . "_" . implode("_", $user->roles->pluck('name')->toArray()) : "";
-        $cacheKey = $userKey . NameOfCache::SUBSCRIPTION_PRICE->value . "_" . md5(json_encode($data));
+        $cacheData = [
+            'filters' => $data,
+            'page' => $page,
+            'per_page' => $perPage
+        ];
+        $cacheKey = $userKey . NameOfCache::SUBSCRIPTION_PRICE->value . "_" . md5(json_encode($cacheData));
         return $cacheKey;
     }
 
@@ -53,13 +62,16 @@ class SubscriptionPriceService
      */
     public function getAll(array $data = []): array
     {
-        $cacheKey = $this->genKey($data, "all_SubscriptionPrice_");
+        $page = request()->integer('page', 1);
+        $perPage = request()->integer('per_page', 15);
+        $cacheKey = $this->genKey($data, "_not_trashed_subscription_price_", $page, $perPage);
         return Cache::tags(NameOfCache::SUBSCRIPTION_PRICE->value)
             ->remember($cacheKey, self::TIME_TTL, function () use ($data) {
                 $prices = SubscriptionPrice::query()->active(Auth::user());
                 if (! empty($data)) {
                     $this->filterData($prices, $data);
                 }
+                $this->sortData($prices, $data, ['plan_id', 'created_at', 'price', 'trail_days']);
                 return $prices->paginate(15)->toArray();
             });
     }
@@ -361,13 +373,16 @@ class SubscriptionPriceService
      */
     public function getTrashedSubscriptionPrices(array $data = []): array
     {
-        $cacheKey = $this->genKey($data, "_trashed_SubscriptionPrice_");
+        $page = request()->integer('page', 1);
+        $perPage = request()->integer('per_page', 15);
+        $cacheKey = $this->genKey($data, "_trashed_SubscriptionPrice_", $page, $perPage);
         return Cache::tags(NameOfCache::SUBSCRIPTION_PRICE->value)
             ->remember($cacheKey, self::TIME_TTL, function () use ($data) {
                 $prices = SubscriptionPrice::query()->onlyTrashed();
                 if (! empty($data)) {
                     $this->filterData($prices, $data);
                 }
+                $this->sortData($prices, $data, ['plan_id', 'created_at', 'price', 'trail_days']);
                 return $prices->paginate(15)->toArray();
             });
     }
