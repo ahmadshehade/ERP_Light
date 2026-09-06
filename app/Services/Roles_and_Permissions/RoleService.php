@@ -43,7 +43,7 @@ class RoleService
                 $this->filterData($roles, $data);
             }
 
-            return $roles->get();
+            return $roles->paginate(15);
         });
     }
 

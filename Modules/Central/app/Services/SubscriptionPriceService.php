@@ -60,7 +60,7 @@ class SubscriptionPriceService
                 if (! empty($data)) {
                     $this->filterData($prices, $data);
                 }
-                return $prices->get()->toArray();
+                return $prices->paginate(15)->toArray();
             });
     }
 
@@ -368,7 +368,7 @@ class SubscriptionPriceService
                 if (! empty($data)) {
                     $this->filterData($prices, $data);
                 }
-                return $prices->get()->toArray();
+                return $prices->paginate(15)->toArray();
             });
     }
 

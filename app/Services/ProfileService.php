@@ -55,7 +55,7 @@ class ProfileService
                 if (!empty($data)) {
                     $this->filterData($query, $data);
                 }
-                return $query->get()->toArray();
+                return $query->paginate(15)->toArray();
             });
     }
     /**

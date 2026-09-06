@@ -52,7 +52,7 @@ class DepartmentService
             if (!empty($data)) {
                 $this->filterData($departments, $data);
             }
-            return $departments->get()->toArray();
+            return $departments->paginate(15)->toArray();
         });
     }
 
@@ -217,7 +217,7 @@ class DepartmentService
             if (!empty($data)) {
                 $this->filterData($departments, $data);
             }
-            return $departments->get()->toArray();
+            return $departments->paginate(15)->toArray();
         });
     }
 

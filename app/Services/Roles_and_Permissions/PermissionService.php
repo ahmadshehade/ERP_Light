@@ -45,7 +45,7 @@ class PermissionService
                     $this->filterData($query, $data);
                 }
 
-                return $query->get();
+                return $query->paginate(15);
             });
     }
 

@@ -55,7 +55,7 @@ class SubscriptionPlanService
             if (! empty($data)) {
                 $this->filterData($plans, $data);
             }
-            return $plans->get()->toArray();
+            return $plans->paginate(15)->toArray();
         });
     }
 
@@ -213,7 +213,7 @@ class SubscriptionPlanService
             if (! empty($data)) {
                 $this->filterData($plans, $data);
             }
-            return $plans->get()->toArray();
+            return $plans->paginate(15)->toArray();
         });
     }
 

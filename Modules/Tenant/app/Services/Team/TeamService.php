@@ -58,7 +58,7 @@ class TeamService
             if (!empty($data)) {
                 $this->filterData($teams, $data);
             }
-            return $teams->get()->toArray();
+            return $teams->paginate(15)->toArray();
         });
     }
 

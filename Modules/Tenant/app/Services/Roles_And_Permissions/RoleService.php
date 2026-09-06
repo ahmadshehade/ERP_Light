@@ -54,7 +54,7 @@ class RoleService
                 if (!empty($data)) {
                     $this->filterData($roles, $data);
                 }
-                return $roles->get();
+                return $roles->paginate(15);
             }
         );
     }

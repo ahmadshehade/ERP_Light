@@ -64,7 +64,7 @@ class ProjectService
             if (!empty($data)) {
                 $this->filterData($projects, $data);
             }
-            return $projects->get()->toArray();
+            return $projects->paginate(15)->toArray();
         });
     }
 
@@ -276,7 +276,7 @@ class ProjectService
             if (!empty($data)) {
                 $this->filterData($projects, $data);
             }
-            return $projects->get()->toArray();
+            return $projects->paginate(15)->toArray();
         });
     }
 

@@ -62,7 +62,7 @@ class TaskService
             if (!empty($data)) {
                 $this->filterData($tasks, $data);
             }
-            return $tasks->get()->toArray();
+            return $tasks->paginate(15)->toArray();
         });
     }
 
@@ -252,7 +252,7 @@ class TaskService
             if (!empty($data)) {
                 $this->filterData($trashedTask, $data);
             }
-            return $trashedTask->get()->toArray();
+            return $trashedTask->paginate(15)->toArray();
         });
     }
 

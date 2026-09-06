@@ -59,7 +59,7 @@ class PaymentService
             if (!empty($data)) {
                 $this->filterData($payments, $data);
             }
-            return $payments->get()->toArray();
+            return $payments->paginate(15)->toArray();
         });
     }
 
@@ -235,7 +235,7 @@ class PaymentService
             if (!empty($data)) {
                 $this->filterData($payments, $data);
             }
-            return $payments->get()->toArray();
+            return $payments->paginate(15)->toArray();
         });
     }
 

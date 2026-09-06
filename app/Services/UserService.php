@@ -43,7 +43,7 @@ class UserService
                 if (!empty($filters)) {
                     $this->filterData($query, $filters);
                 }
-                return $query->get()->toArray();
+                return $query->paginate(15)->toArray();
             });
     }
 
@@ -138,7 +138,7 @@ class UserService
                 if (! empty($filters)) {
                     $this->filterData($query, $filters);
                 }
-                return $query->get()->toArray();
+                return $query->paginate(15)->toArray();
             });
     }
 

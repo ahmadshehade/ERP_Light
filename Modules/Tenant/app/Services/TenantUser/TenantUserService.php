@@ -65,7 +65,7 @@ class TenantUserService
                 }
                 return $users
                     ->with('user')
-                    ->get()
+                    ->paginate(15)
                     ->toArray();
             });
     }

@@ -59,7 +59,7 @@ class PositionService
             if (!empty($data)) {
                 $this->filterData($positions, $data);
             }
-            return $positions->get()->toArray();
+            return $positions->paginate(15)->toArray();
         });
     }
 
@@ -204,7 +204,7 @@ class PositionService
             if (!empty($data)) {
                 $this->filterData($positions, $data);
             }
-            return $positions->get()->toArray();
+            return $positions->paginate(15)->toArray();
         });
     }
 
