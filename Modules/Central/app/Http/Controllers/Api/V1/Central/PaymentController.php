@@ -6,10 +6,12 @@ use App\Http\Controllers\Controller;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Modules\Central\Services\Payments\PaymentLifeSycle;
+
 use Modules\Central\Http\Requests\Api\V1\Central\Payments\UpdatePaymentRequest;
 use Modules\Central\Models\Payment;
+use Modules\Central\Services\Payments\PaymentLifeSycle;
 use Modules\Central\Services\Payments\PaymentService;
+use Modules\Central\Transformers\PaymentResource;
 
 class PaymentController extends Controller
 {
@@ -24,7 +26,7 @@ class PaymentController extends Controller
         $this->authorize('viewAny', Payment::class);
         $filters = $request->only(['amount', 'status', 'paid_at', 'gateway', 'subscription_id']);
         $payments = $this->paymentService->getAll($filters);
-        return $this->successMessage('Successfully retrieved payments', ['payments' => $payments], 200);
+        return $this->successMessage('Successfully retrieved payments', PaymentResource::collection($payments), 200);
     }
 
     /**
@@ -34,7 +36,7 @@ class PaymentController extends Controller
     {
         $this->authorize('view', $payment);
         $data = $this->paymentService->get($payment);
-        return $this->successMessage('Successfully retrieved payment', ['payment' => $data], 200);
+        return $this->successMessage('Successfully retrieved payment', PaymentResource::make($data), 200);
     }
 
     /**
@@ -44,7 +46,7 @@ class PaymentController extends Controller
     {
         $this->authorize('update', $payment);
         $data = $this->paymentService->update($payment, $request->validated());
-        return $this->successMessage('Successfully updated payment', ['payment' => $data], 200);
+        return $this->successMessage('Successfully updated payment', PaymentResource::make($data), 200);
     }
 
     /**
@@ -66,7 +68,7 @@ class PaymentController extends Controller
     {
         $this->authorize('restore', $payment);
         $data = $this->paymentService->restore($payment);
-        return $this->successMessage('Successfully restore payment', ['payment' => $data], 200);
+        return $this->successMessage('Successfully restore payment', PaymentResource::make($data), 200);
     }
 
     /**
@@ -91,7 +93,7 @@ class PaymentController extends Controller
         $this->authorize('getAnyTrashed', Payment::class);
         $filters = $request->only(['amount', 'status', 'paid_at', 'gateway', 'subscription_id']);
         $trashedPayments = $this->paymentService->getAllTrashed($filters);
-        return $this->successMessage('Successfully retrieved trasshed payments', ['trashedPayments' => $trashedPayments], 200);
+        return $this->successMessage('Successfully retrieved trasshed payments', PaymentResource::collection($trashedPayments), 200);
     }
 
     /**
@@ -103,7 +105,7 @@ class PaymentController extends Controller
     {
         $this->authorize('getTrashed', $payment);
         $data = $this->paymentService->getTrashed($payment);
-        return $this->successMessage('Successfully retrieved trashed payment', ['payment' => $data], 200);
+        return $this->successMessage('Successfully retrieved trashed payment', PaymentResource::make($data), 200);
     }
 
     /**
@@ -137,7 +139,7 @@ class PaymentController extends Controller
     public function pay(Payment $payment): JsonResponse
     {
         $pay = $this->lifeSycle->pay($payment);
-        return $this->successMessage('Successfully pay payment', ['payment' => $pay], 200);
+        return $this->successMessage('Successfully pay payment', PaymentResource::make($pay), 200);
     }
 
     /**
@@ -149,7 +151,7 @@ class PaymentController extends Controller
     {
         $this->authorize('cancel', $payment);
         $cancel = $this->lifeSycle->cancel($payment);
-        return $this->successMessage('Successfully cancel payment', ['payment' => $cancel], 200);
+        return $this->successMessage('Successfully cancel payment', PaymentResource::make($cancel), 200);
     }
 
     /**
@@ -161,7 +163,7 @@ class PaymentController extends Controller
     {
         $this->authorize('retry', $payment);
         $retry = $this->lifeSycle->retry($payment);
-        return $this->successMessage('Successfully retry payment', ['payment' => $retry], 200);
+        return $this->successMessage('Successfully retry payment', PaymentResource::make($retry), 200);
     }
 
     /**
@@ -173,7 +175,7 @@ class PaymentController extends Controller
     {
         $this->authorize('refund', $payment);
         $refund = $this->lifeSycle->refund($payment);
-        return $this->successMessage('Successfully refund paymnet', ['payment' => $refund], 200);
+        return $this->successMessage('Successfully refund paymnet', PaymentResource::make($refund), 200);
     }
 
     /**
@@ -186,6 +188,6 @@ class PaymentController extends Controller
 
         $reason = $request->input('reason');
         $fail = $this->lifeSycle->fail($payment, $reason);
-        return $this->successMessage('Successfully fail payment', ['payment' => $fail], 200);
+        return $this->successMessage('Successfully fail payment', PaymentResource::make($fail), 200);
     }
 }

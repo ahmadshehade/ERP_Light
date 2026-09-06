@@ -4,6 +4,7 @@ namespace Modules\Tenant\Services\TenantUser;
 
 use App\Enums\NameOfCache;
 use App\Traits\ApplyFilters;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -57,24 +58,84 @@ class TenantUserService
     public function getAll(array $data = [])
     {
         $page = request()->integer('page', 1);
-        $perPage = request()->integer('perPage', 15);
-        $cacheKey = $this->genKey($data, "all_TenantUser_", $page, $perPage);
+        $perPage = request()->integer('per_page', 15);
 
-        return Cache::tags(NameOfCache::TENANT_USER->value)
+        $cacheKey = $this->genKey(
+            $data,
+            'all_TenantUser',
+            $page,
+            $perPage
+        );
 
-            ->remember($cacheKey, self::TIME_TTL, function () use ($data) {
-                $users = TenantUser::query()->with('user', 'departments', 'positions', 'teams');
-                if (!empty($data)) {
-                    $this->filterData($users, $data);
+        $cached = Cache::tags(NameOfCache::TENANT_USER->value)
+            ->remember(
+                $cacheKey,
+                self::TIME_TTL,
+                function () use ($data, $perPage) {
+
+                    $users = TenantUser::query()
+                        ->with([
+                            'user',
+                            'departments',
+                            'positions',
+                            'teams',
+                        ]);
+
+                    if (!empty($data)) {
+                        $this->filterData($users, $data);
+                    }
+
+                    $this->sortData(
+                        $users,
+                        $data,
+                        ['user_id', 'created_at']
+                    );
+
+                    $paginator = $users->paginate($perPage);
+
+                    return [
+                        'ids' => $paginator
+                            ->getCollection()
+                            ->pluck('id')
+                            ->all(),
+
+                        'total' => $paginator->total(),
+
+                        'per_page' => $paginator->perPage(),
+
+                        'current_page' => $paginator->currentPage(),
+                    ];
                 }
-                $this->sortData($users, $data, ['user_id', 'created_at']);
-                return $users
-                    ->with('user')
-                    ->paginate(15);
+            );
 
-            });
+        $users = TenantUser::query()
+            ->with([
+                'user',
+                'departments',
+                'positions',
+                'teams',
+            ])
+            ->whereIn('id', $cached['ids'])
+            ->get()
+            ->sortBy(
+                fn($user) => array_search(
+                    $user->id,
+                    $cached['ids']
+                )
+            )
+            ->values();
+
+        return new LengthAwarePaginator(
+            $users,
+            $cached['total'],
+            $cached['per_page'],
+            $cached['current_page'],
+            [
+                'path' => request()->url(),
+                'query' => request()->query(),
+            ]
+        );
     }
-
     /**
      * Summary of get
      * @param TenantUser $tenantUser

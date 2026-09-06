@@ -5,6 +5,7 @@ namespace Modules\Tenant\Services\Team;
 use App\Enums\NameOfCache;
 use App\Traits\ApplyFilters;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -30,11 +31,11 @@ class TeamService
     protected function genKey(array $data = [], string $prefix = '', int $page = 1, int $perPage = 15)
     {
         $user = Auth::user();
-        $userKey = $user ? $user->id . $prefix . tenant('id') . implode("_" . $user->roles->pluck("name")->toArray()) : "";
+        $userKey = $user ? $user->id . $prefix . tenant('id') . implode("_", $user->roles->pluck("name")->toArray()) : "";
         $cacheData = [
             'filters' => $data,
             'page' => $page,
-            'perPage' => $perPage
+            'per_page' => $perPage
         ];
         return  $userKey . "_" . NameOfCache::TEAM->value . "_" . md5(json_encode($cacheData));
     }
@@ -53,15 +54,67 @@ class TeamService
     public function getAll(array $data = [])
     {
         $page = request()->integer('page', 1);
-        $perPage = request()->integer('perPage', 15);
-        $cacheKey = $this->genKey($data, 'no_trashed', $page, $perPage);
-        return Cache::tags(NameOfCache::TEAM->value)->remember($cacheKey, self::TIME_TTL, function () use ($data) {
-            $teams = Team::active(Auth::user())->with('media');
-            if (!empty($data)) {
-                $this->filterData($teams, $data);
-            }
-            return $teams->paginate(15);
-        });
+        $perPage = request()->integer('per_page', 15);
+
+        $cacheKey = $this->genKey(
+            $data,
+            'no_trashed',
+            $page,
+            $perPage
+        );
+
+        $cached = Cache::tags(NameOfCache::TEAM->value)
+            ->remember(
+                $cacheKey,
+                self::TIME_TTL,
+                function () use ($data, $perPage) {
+
+                    $teams = Team::active(Auth::user())
+                        ->with('media');
+
+                    if (!empty($data)) {
+                        $this->filterData($teams, $data);
+                    }
+
+                    $paginator = $teams->paginate($perPage);
+
+                    return [
+                        'ids' => $paginator
+                            ->getCollection()
+                            ->pluck('id')
+                            ->all(),
+
+                        'total' => $paginator->total(),
+
+                        'per_page' => $paginator->perPage(),
+
+                        'current_page' => $paginator->currentPage(),
+                    ];
+                }
+            );
+
+        $teams = Team::active(Auth::user())
+            ->with('media')
+            ->whereIn('id', $cached['ids'])
+            ->get()
+            ->sortBy(
+                fn($team) => array_search(
+                    $team->id,
+                    $cached['ids']
+                )
+            )
+            ->values();
+
+        return new LengthAwarePaginator(
+            $teams,
+            $cached['total'],
+            $cached['per_page'],
+            $cached['current_page'],
+            [
+                'path' => request()->url(),
+                'query' => request()->query(),
+            ]
+        );
     }
 
     /**

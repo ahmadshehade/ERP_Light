@@ -6,6 +6,7 @@ use App\Enums\NameOfCache;
 use App\Models\User;
 use App\Traits\ApplyFilters;
 use Illuminate\Http\Client\HttpClientException;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -20,12 +21,35 @@ class UserService
     /**
      * Generate cache key.
      */
-    private function genKey(User $user, array $filters = [], string $prefix = ''): string
-    {
+    private function genKey(
+        User $user,
+        array $filters = [],
+        string $prefix = '',
+        int $page = 1,
+        int $perPage = 15
+    ): string {
         ksort($filters);
-        $userKey = $user->id . "_" . implode("_", $user->roles->pluck('name')->sort()->toArray()) . "_" . md5(json_encode($filters));
-        $cacheKey = $userKey . "_" . NameOfCache::USER->value . "_" . $prefix . "_" . md5(json_encode($filters));
-        return $cacheKey;
+
+        $roles = $user->roles
+            ->pluck('name')
+            ->sort()
+            ->implode('_');
+
+        $cacheData = [
+            'filters' => $filters,
+            'page' => $page,
+            'per_page' => $perPage,
+        ];
+
+        return $user->id
+            . '_'
+            . $roles
+            . '_'
+            . NameOfCache::USER->value
+            . '_'
+            . $prefix
+            . '_'
+            . md5(json_encode($cacheData));
     }
     /**
      * Get all users.
@@ -33,17 +57,79 @@ class UserService
     public function getAllUsers(array $filters = [])
     {
         $user = Auth::user();
-        $cacheKey = $this->genKey($user, $filters, 'all_users');
-        return Cache::tags([NameOfCache::USER->value])
-            ->remember($cacheKey, self::CACHE_TTL, function () use ($filters) {
+
+        $page = request()->integer('page', 1);
+        $perPage = 15;
+
+        $cacheKey = $this->genKey(
+            $user,
+            $filters,
+            'all_users',
+            $page,
+            $perPage
+        );
+
+        $cached = Cache::tags([
+            NameOfCache::USER->value
+        ])->remember(
+            $cacheKey,
+            self::CACHE_TTL,
+            function () use ($filters, $perPage) {
 
                 $query = User::query();
+
                 if (!empty($filters)) {
                     $this->filterData($query, $filters);
                 }
-                $this->sortData($query, $filters, ['name', 'created_at', 'updated_at']);
-                return $query->paginate(15);
-            });
+
+                $this->sortData(
+                    $query,
+                    $filters,
+                    [
+                        'name',
+                        'created_at',
+                        'updated_at',
+                    ]
+                );
+
+                $paginator = $query->paginate($perPage);
+
+                return [
+                    'ids' => $paginator
+                        ->getCollection()
+                        ->pluck('id')
+                        ->all(),
+
+                    'total' => $paginator->total(),
+
+                    'per_page' => $paginator->perPage(),
+
+                    'current_page' => $paginator->currentPage(),
+                ];
+            }
+        );
+
+        $users = User::query()
+            ->whereIn('id', $cached['ids'])
+            ->get()
+            ->sortBy(
+                fn($user) => array_search(
+                    $user->id,
+                    $cached['ids']
+                )
+            )
+            ->values();
+
+        return new LengthAwarePaginator(
+            $users,
+            $cached['total'],
+            $cached['per_page'],
+            $cached['current_page'],
+            [
+                'path' => request()->url(),
+                'query' => request()->query(),
+            ]
+        );
     }
 
     /**
@@ -125,21 +211,87 @@ class UserService
     public function trashedUsers(array $filters = [])
     {
         $user = Auth::user();
-        $cacheKey = $this->genKey($user, $filters, 'trashed_users');
-        return Cache::tags([NameOfCache::USER->value])
-            ->remember($cacheKey, self::CACHE_TTL, function () use ($filters) {
+
+        $page = request()->integer('page', 1);
+        $perPage = 15;
+
+        $cacheKey = $this->genKey(
+            $user,
+            $filters,
+            'trashed_users',
+            $page,
+            $perPage
+        );
+
+        $cached = Cache::tags([
+            NameOfCache::USER->value
+        ])->remember(
+            $cacheKey,
+            self::CACHE_TTL,
+            function () use ($filters, $perPage) {
 
                 $query = User::onlyTrashed()
                     ->with([
                         'profile',
                         'roles',
                     ]);
-                if (! empty($filters)) {
+
+                if (!empty($filters)) {
                     $this->filterData($query, $filters);
                 }
-                $this->sortData($query, $filters, ['name', 'created_at', 'updated_at']);
-                return $query->paginate(15);
-            });
+
+                $this->sortData(
+                    $query,
+                    $filters,
+                    [
+                        'name',
+                        'created_at',
+                        'updated_at',
+                    ]
+                );
+
+                $paginator = $query->paginate($perPage);
+
+                return [
+                    'ids' => $paginator
+                        ->getCollection()
+                        ->pluck('id')
+                        ->all(),
+
+                    'total' => $paginator->total(),
+
+                    'per_page' => $paginator->perPage(),
+
+                    'current_page' => $paginator->currentPage(),
+                ];
+            }
+        );
+
+        $users = User::onlyTrashed()
+            ->with([
+                'profile',
+                'roles',
+            ])
+            ->whereIn('id', $cached['ids'])
+            ->get()
+            ->sortBy(
+                fn($user) => array_search(
+                    $user->id,
+                    $cached['ids']
+                )
+            )
+            ->values();
+
+        return new LengthAwarePaginator(
+            $users,
+            $cached['total'],
+            $cached['per_page'],
+            $cached['current_page'],
+            [
+                'path' => request()->url(),
+                'query' => request()->query(),
+            ]
+        );
     }
 
     /**

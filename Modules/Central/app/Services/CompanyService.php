@@ -7,6 +7,7 @@ use App\Exceptions\BusinessRuleException;
 use App\Models\User;
 use App\Traits\ApplyFilters;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
@@ -69,24 +70,64 @@ class CompanyService
     {
         $page = request()->integer('page', 1);
         $perPage = request()->integer('per_page', 15);
+
         $cacheKey = $this->genKey($data, "_no_trashed_", $page, $perPage);
-        return Cache::tags(NameOfCache::COMPANY->value)
+
+        $cached = Cache::tags(NameOfCache::COMPANY->value)
             ->remember(
                 $cacheKey,
                 self::CACHE_TTL,
-                function () use ($data) {
+                function () use ($data, $perPage) {
+
                     $query = Company::query()
                         ->userCompanies(Auth::user())
                         ->with([
                             'owner',
                         ]);
+
                     if (!empty($data)) {
                         $this->filterData($query, $data);
                     }
-                    $this->sortData($query, $data, ['name', 'subdomain', 'max_users', 'created_at']);
-                    return $query->paginate(15);
+
+                    $this->sortData(
+                        $query,
+                        $data,
+                        ['name', 'subdomain', 'max_users', 'created_at']
+                    );
+
+                    $paginator = $query->paginate($perPage);
+
+                    return [
+                        'ids' => $paginator->getCollection()->pluck('id')->all(),
+                        'total' => $paginator->total(),
+                        'per_page' => $paginator->perPage(),
+                        'current_page' => $paginator->currentPage(),
+                    ];
                 }
             );
+
+        $companies = Company::query()
+            ->userCompanies(Auth::user())
+            ->with([
+                'owner',
+            ])
+            ->whereIn('id', $cached['ids'])
+            ->get()
+            ->sortBy(
+                fn($company) => array_search($company->id, $cached['ids'])
+            )
+            ->values();
+
+        return new LengthAwarePaginator(
+            $companies,
+            $cached['total'],
+            $cached['per_page'],
+            $cached['current_page'],
+            [
+                'path' => request()->url(),
+                'query' => request()->query(),
+            ]
+        );
     }
 
     /**
@@ -285,30 +326,68 @@ class CompanyService
     /**
      * Get all trashed companies.
      */
-    public function getAllTrashedCompanies(
-        array $data = []
-    ): array {
+    public function getAllTrashedCompanies(array $data = [])
+    {
         $page = request()->integer('page', 1);
         $perPage = request()->integer('per_page', 15);
+
         $cacheKey = $this->genKey($data, "_trashed_", $page, $perPage);
-        return Cache::tags(NameOfCache::COMPANY->value)
+
+        $cached = Cache::tags(NameOfCache::COMPANY->value)
             ->remember(
                 $cacheKey,
                 self::CACHE_TTL,
-                function () use ($data) {
+                function () use ($data, $perPage) {
 
                     $query = Company::onlyTrashed()
                         ->userCompanies(Auth::user())
                         ->with([
                             'owner',
                         ]);
+
                     if (!empty($data)) {
                         $this->filterData($query, $data);
                     }
-                    $this->sortData($query, $data, ['name', 'subdomain', 'max_users', 'created_at']);
-                    return $query->paginate(15);
+
+                    $this->sortData(
+                        $query,
+                        $data,
+                        ['name', 'subdomain', 'max_users', 'created_at']
+                    );
+
+                    $paginator = $query->paginate($perPage);
+
+                    return [
+                        'ids' => $paginator->getCollection()->pluck('id')->all(),
+                        'total' => $paginator->total(),
+                        'per_page' => $paginator->perPage(),
+                        'current_page' => $paginator->currentPage(),
+                    ];
                 }
             );
+
+        $companies = Company::onlyTrashed()
+            ->userCompanies(Auth::user())
+            ->with([
+                'owner',
+            ])
+            ->whereIn('id', $cached['ids'])
+            ->get()
+            ->sortBy(
+                fn($company) => array_search($company->id, $cached['ids'])
+            )
+            ->values();
+
+        return new LengthAwarePaginator(
+            $companies,
+            $cached['total'],
+            $cached['per_page'],
+            $cached['current_page'],
+            [
+                'path' => request()->url(),
+                'query' => request()->query(),
+            ]
+        );
     }
 
     /**

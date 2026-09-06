@@ -6,6 +6,7 @@ use App\Enums\NameOfCache;
 use App\Enums\NameOfRoles;
 use App\Models\User;
 use App\Traits\ApplyFilters;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use RuntimeException;
@@ -21,12 +22,31 @@ class RoleService
     /**
      * Generate a unique cache key based on the user and provided data
      */
-    private function genKey(array $data = [])
-    {
+    private function genKey(
+        array $data = [],
+        int $page = 1,
+        int $perPage = 15
+    ): string {
         $user = Auth::user();
-        $userkey = $user->id . "_" . implode("_", $user->roles->pluck('name')->sort()->toArray()) . "_" . md5(json_encode($data));
-        $cahceKey = $userkey . "_" . NameOfCache::ROLE->value;
-        return $cahceKey;
+
+        $roles = $user->roles
+            ->pluck('name')
+            ->sort()
+            ->implode('_');
+
+        $cacheData = [
+            'filters' => $data,
+            'page' => $page,
+            'per_page' => $perPage,
+        ];
+
+        return $user->id
+            . '_'
+            . $roles
+            . '_'
+            . NameOfCache::ROLE->value
+            . '_'
+            . md5(json_encode($cacheData));
     }
 
     /**
@@ -34,17 +54,72 @@ class RoleService
      */
     public function getAll(array $data = [])
     {
+        $page = request()->integer('page', 1);
+        $perPage = 15;
 
+        $cacheKey = $this->genKey(
+            $data,
+            $page,
+            $perPage
+        );
 
-        $userkey = $this->genKey($data);
-        return Cache::tags([NameOfCache::ROLE->value])->remember($userkey, now()->addHours(24), function () use ($data) {
-            $roles = Role::query();
-            if (! empty($data)) {
-                $this->filterData($roles, $data);
+        $cached = Cache::tags([
+            NameOfCache::ROLE->value
+        ])->remember(
+            $cacheKey,
+            60,
+            function () use ($data, $perPage) {
+
+                $roles = Role::query();
+
+                if (!empty($data)) {
+                    $this->filterData($roles, $data);
+                }
+
+                $this->sortData(
+                    $roles,
+                    $data,
+                    ['name', 'created_at', 'updated_at']
+                );
+
+                $paginator = $roles->paginate($perPage);
+
+                return [
+                    'ids' => $paginator
+                        ->getCollection()
+                        ->pluck('id')
+                        ->all(),
+
+                    'total' => $paginator->total(),
+
+                    'per_page' => $paginator->perPage(),
+
+                    'current_page' => $paginator->currentPage(),
+                ];
             }
-            $this->sortData($roles, $data, ['name', 'created_at', 'updated_at']);
-            return $roles->paginate(15)->toArray();
-        });
+        );
+
+        $roles = Role::query()
+            ->whereIn('id', $cached['ids'])
+            ->get()
+            ->sortBy(
+                fn($role) => array_search(
+                    $role->id,
+                    $cached['ids']
+                )
+            )
+            ->values();
+
+        return new LengthAwarePaginator(
+            $roles,
+            $cached['total'],
+            $cached['per_page'],
+            $cached['current_page'],
+            [
+                'path' => request()->url(),
+                'query' => request()->query(),
+            ]
+        );
     }
 
     /**

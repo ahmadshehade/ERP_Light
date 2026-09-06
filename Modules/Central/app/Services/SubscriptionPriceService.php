@@ -13,6 +13,7 @@ use Modules\Central\Models\SubscriptionPlan;
 use Modules\Central\Models\SubscriptionPrice;
 use Modules\Central\Services\SubscriptionPrices\SubscriptionPriceNotification;
 use App\Exceptions\BusinessRuleException;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class SubscriptionPriceService
 {
@@ -64,16 +65,63 @@ class SubscriptionPriceService
     {
         $page = request()->integer('page', 1);
         $perPage = request()->integer('per_page', 15);
-        $cacheKey = $this->genKey($data, "_not_trashed_subscription_price_", $page, $perPage);
-        return Cache::tags(NameOfCache::SUBSCRIPTION_PRICE->value)
-            ->remember($cacheKey, self::TIME_TTL, function () use ($data) {
-                $prices = SubscriptionPrice::query()->active(Auth::user());
-                if (! empty($data)) {
-                    $this->filterData($prices, $data);
+
+        $cacheKey = $this->genKey(
+            $data,
+            "_not_trashed_subscription_price_",
+            $page,
+            $perPage
+        );
+
+        $cached = Cache::tags(NameOfCache::SUBSCRIPTION_PRICE->value)
+            ->remember(
+                $cacheKey,
+                self::TIME_TTL,
+                function () use ($data, $perPage) {
+
+                    $prices = SubscriptionPrice::query()
+                        ->active(Auth::user());
+
+                    if (!empty($data)) {
+                        $this->filterData($prices, $data);
+                    }
+
+                    $this->sortData(
+                        $prices,
+                        $data,
+                        ['plan_id', 'created_at', 'price', 'trail_days']
+                    );
+
+                    $paginator = $prices->paginate($perPage);
+
+                    return [
+                        'ids' => $paginator->getCollection()->pluck('id')->all(),
+                        'total' => $paginator->total(),
+                        'per_page' => $paginator->perPage(),
+                        'current_page' => $paginator->currentPage(),
+                    ];
                 }
-                $this->sortData($prices, $data, ['plan_id', 'created_at', 'price', 'trail_days']);
-                return $prices->paginate(15);
-            });
+            );
+
+        $prices = SubscriptionPrice::query()
+            ->active(Auth::user())
+            ->whereIn('id', $cached['ids'])
+            ->get()
+            ->sortBy(
+                fn($price) => array_search($price->id, $cached['ids'])
+            )
+            ->values();
+
+        return new LengthAwarePaginator(
+            $prices,
+            $cached['total'],
+            $cached['per_page'],
+            $cached['current_page'],
+            [
+                'path' => request()->url(),
+                'query' => request()->query(),
+            ]
+        );
     }
 
 
@@ -375,16 +423,60 @@ class SubscriptionPriceService
     {
         $page = request()->integer('page', 1);
         $perPage = request()->integer('per_page', 15);
-        $cacheKey = $this->genKey($data, "_trashed_SubscriptionPrice_", $page, $perPage);
-        return Cache::tags(NameOfCache::SUBSCRIPTION_PRICE->value)
-            ->remember($cacheKey, self::TIME_TTL, function () use ($data) {
-                $prices = SubscriptionPrice::query()->onlyTrashed();
-                if (! empty($data)) {
-                    $this->filterData($prices, $data);
+
+        $cacheKey = $this->genKey(
+            $data,
+            "_trashed_SubscriptionPrice_",
+            $page,
+            $perPage
+        );
+        $cached = Cache::tags(NameOfCache::SUBSCRIPTION_PRICE->value)
+            ->remember(
+                $cacheKey,
+                self::TIME_TTL,
+                function () use ($data, $perPage) {
+
+                    $prices = SubscriptionPrice::onlyTrashed();
+
+                    if (!empty($data)) {
+                        $this->filterData($prices, $data);
+                    }
+
+                    $this->sortData(
+                        $prices,
+                        $data,
+                        ['plan_id', 'created_at', 'price', 'trail_days']
+                    );
+
+                    $paginator = $prices->paginate($perPage);
+
+                    return [
+                        'ids' => $paginator->getCollection()->pluck('id')->all(),
+                        'total' => $paginator->total(),
+                        'per_page' => $paginator->perPage(),
+                        'current_page' => $paginator->currentPage(),
+                    ];
                 }
-                $this->sortData($prices, $data, ['plan_id', 'created_at', 'price', 'trail_days']);
-                return $prices->paginate(15);
-            });
+            );
+
+        $prices = SubscriptionPrice::onlyTrashed()
+            ->whereIn('id', $cached['ids'])
+            ->get()
+            ->sortBy(
+                fn($price) => array_search($price->id, $cached['ids'])
+            )
+            ->values();
+
+        return new LengthAwarePaginator(
+            $prices,
+            $cached['total'],
+            $cached['per_page'],
+            $cached['current_page'],
+            [
+                'path' => request()->url(),
+                'query' => request()->query(),
+            ]
+        );
     }
 
     /**

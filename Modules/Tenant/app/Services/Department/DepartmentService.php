@@ -13,6 +13,7 @@ use Modules\Tenant\Jobs\ProcessDepartmentMediaJob;
 use Modules\Tenant\Models\Department;
 use Modules\Tenant\Models\TenantUser;
 use App\Exceptions\BusinessRuleException;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class DepartmentService
 {
@@ -43,20 +44,70 @@ class DepartmentService
         Cache::tags([NameOfCache::TENANT_DEPARTMENT->value])->flush();
     }
 
-    public function  getAll(array $data = []): array
+    public function getAll(array $data = [])
     {
         $page = request()->integer('page', 1);
         $perPage = request()->integer('per_page', 15);
-        $cacheKey = $this->genKey($data, 'no_trashed', $page, $perPage);
-        return Cache::tags(NameOfCache::TENANT_DEPARTMENT->value)->remember($cacheKey, self::TIME_TTL, function () use ($data) {
 
-            $departments = Department::active(Auth::user())->with(['media']);
-            if (!empty($data)) {
-                $this->filterData($departments, $data);
-            }
-            $this->sortData($departments, $data, ['name', 'created_at']);
-            return $departments->paginate(15)->toArray();
-        });
+        $cacheKey = $this->genKey(
+            $data,
+            'no_trashed',
+            $page,
+            $perPage
+        );
+
+        $cached = Cache::tags(NameOfCache::TENANT_DEPARTMENT->value)
+            ->remember(
+                $cacheKey,
+                self::TIME_TTL,
+                function () use ($data, $perPage) {
+
+                    $departments = Department::active(Auth::user())
+                        ->with(['media']);
+
+                    if (!empty($data)) {
+                        $this->filterData($departments, $data);
+                    }
+
+                    $this->sortData(
+                        $departments,
+                        $data,
+                        ['name', 'created_at']
+                    );
+
+                    $paginator = $departments->paginate($perPage);
+
+                    return [
+                        'ids' => $paginator->getCollection()->pluck('id')->all(),
+                        'total' => $paginator->total(),
+                        'per_page' => $paginator->perPage(),
+                        'current_page' => $paginator->currentPage(),
+                    ];
+                }
+            );
+
+        $departments = Department::active(Auth::user())
+            ->with(['media'])
+            ->whereIn('id', $cached['ids'])
+            ->get()
+            ->sortBy(
+                fn($department) => array_search(
+                    $department->id,
+                    $cached['ids']
+                )
+            )
+            ->values();
+
+        return new LengthAwarePaginator(
+            $departments,
+            $cached['total'],
+            $cached['per_page'],
+            $cached['current_page'],
+            [
+                'path' => request()->url(),
+                'query' => request()->query(),
+            ]
+        );
     }
 
     /**
@@ -212,19 +263,70 @@ class DepartmentService
      * @param array $data
      * @return array
      */
-    public function getAllTrashed(array $data = []): array
+    public function getAllTrashed(array $data = [])
     {
         $page = request()->integer('page', 1);
         $perPage = request()->integer('per_page', 15);
-        $cacheKey = $this->genKey($data, 'trashed', $page, $perPage);
-        return Cache::tags(NameOfCache::TENANT_DEPARTMENT->value)->remember($cacheKey, self::TIME_TTL, function () use ($data) {
-            $departments = Department::onlyTrashed()->with(['media']);
-            if (!empty($data)) {
-                $this->filterData($departments, $data);
-            }
-            $this->sortData($departments, $data, ['name', 'created_at']);
-            return $departments->paginate(15)->toArray();
-        });
+
+        $cacheKey = $this->genKey(
+            $data,
+            'trashed',
+            $page,
+            $perPage
+        );
+
+        $cached = Cache::tags(NameOfCache::TENANT_DEPARTMENT->value)
+            ->remember(
+                $cacheKey,
+                self::TIME_TTL,
+                function () use ($data, $perPage) {
+
+                    $departments = Department::onlyTrashed()
+                        ->with(['media']);
+
+                    if (!empty($data)) {
+                        $this->filterData($departments, $data);
+                    }
+
+                    $this->sortData(
+                        $departments,
+                        $data,
+                        ['name', 'created_at']
+                    );
+
+                    $paginator = $departments->paginate($perPage);
+
+                    return [
+                        'ids' => $paginator->getCollection()->pluck('id')->all(),
+                        'total' => $paginator->total(),
+                        'per_page' => $paginator->perPage(),
+                        'current_page' => $paginator->currentPage(),
+                    ];
+                }
+            );
+
+        $departments = Department::onlyTrashed()
+            ->with(['media'])
+            ->whereIn('id', $cached['ids'])
+            ->get()
+            ->sortBy(
+                fn($department) => array_search(
+                    $department->id,
+                    $cached['ids']
+                )
+            )
+            ->values();
+
+        return new LengthAwarePaginator(
+            $departments,
+            $cached['total'],
+            $cached['per_page'],
+            $cached['current_page'],
+            [
+                'path' => request()->url(),
+                'query' => request()->query(),
+            ]
+        );
     }
 
     /**

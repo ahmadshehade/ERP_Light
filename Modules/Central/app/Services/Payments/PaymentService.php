@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Modules\Central\Models\Payment;
 use Modules\Central\Models\Subscription;
 use App\Exceptions\BusinessRuleException;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class PaymentService
 {
@@ -56,15 +57,57 @@ class PaymentService
     {
         $page = request()->integer('page', 1);
         $perPage = request()->integer('per_page', 15);
-        $cacheKey = $this->genKey("_no_trashed_", $data, $page, $perPage);
-        return Cache::tags(NameOfCache::PAYMENT->value)->remember($cacheKey, self::TIME_TTL, function () use ($data) {
-            $payments = Payment::query()->ownerPaymnets(Auth::user())->with('subscription.company.owner');
-            if (!empty($data)) {
-                $this->filterData($payments, $data);
+
+        $cacheKey = $this->genKey('_no_trashed_', $data, $page, $perPage);
+
+        $cached = Cache::tags(NameOfCache::PAYMENT->value)->remember(
+            $cacheKey,
+            self::TIME_TTL,
+            function () use ($data, $perPage) {
+
+                $payments = Payment::query()
+                    ->ownerPaymnets(Auth::user())
+                    ->with('subscription.company.owner');
+
+                if (!empty($data)) {
+                    $this->filterData($payments, $data);
+                }
+
+                $this->sortData(
+                    $payments,
+                    $data,
+                    ['subscription_id', 'status', 'created_at', 'amount', 'paid_at']
+                );
+
+                $paginator = $payments->paginate($perPage);
+
+                return [
+                    'ids' => $paginator->getCollection()->pluck('id')->all(),
+                    'total' => $paginator->total(),
+                    'per_page' => $paginator->perPage(),
+                    'current_page' => $paginator->currentPage(),
+                ];
             }
-            $this->sortData($payments, $data, ['subscription_id', 'status', 'created_at', 'amount', 'paid_at']);
-            return $payments->paginate(15);
-        });
+        );
+
+        $payments = Payment::query()
+            ->ownerPaymnets(Auth::user())
+            ->with('subscription.company.owner')
+            ->whereIn('id', $cached['ids'])
+            ->get()
+            ->sortBy(fn($payment) => array_search($payment->id, $cached['ids']))
+            ->values();
+
+        return new LengthAwarePaginator(
+            $payments,
+            $cached['total'],
+            $cached['per_page'],
+            $cached['current_page'],
+            [
+                'path' => request()->url(),
+                'query' => request()->query(),
+            ]
+        );
     }
 
     /**
@@ -231,19 +274,55 @@ class PaymentService
      * @param array $data
      * @return array
      */
+
     public function getAllTrashed(array $data = [])
     {
         $page = request()->integer('page', 1);
         $perPage = request()->integer('per_page', 15);
+
         $cacheKey = $this->genKey("_trashed_", $data, $page, $perPage);
-        return Cache::tags(NameOfCache::PAYMENT->value)->remember($cacheKey, self::TIME_TTL, function () use ($data) {
-            $payments = Payment::onlyTrashed()->with('subscription.company.owner');
-            if (!empty($data)) {
-                $this->filterData($payments, $data);
+
+        $cached = Cache::tags(NameOfCache::PAYMENT->value)->remember(
+            $cacheKey,
+            self::TIME_TTL,
+            function () use ($data, $perPage) {
+                $payments = Payment::onlyTrashed()
+                    ->with('subscription.company.owner');
+                if (!empty($data)) {
+                    $this->filterData($payments, $data);
+                }
+                $this->sortData(
+                    $payments,
+                    $data,
+                    ['subscription_id', 'status', 'created_at', 'amount', 'paid_at']
+                );
+                $paginator = $payments->paginate($perPage);
+                return [
+                    'ids' => $paginator->getCollection()->pluck('id')->all(),
+                    'total' => $paginator->total(),
+                    'per_page' => $paginator->perPage(),
+                    'current_page' => $paginator->currentPage(),
+                ];
             }
-            $this->sortData($payments, $data, ['subscription_id', 'status', 'created_at', 'amount', 'paid_at']);
-            return $payments->paginate(15);
-        });
+        );
+
+        $payments = Payment::onlyTrashed()
+            ->with('subscription.company.owner')
+            ->whereIn('id', $cached['ids'])
+            ->get()
+            ->sortBy(fn($payment) => array_search($payment->id, $cached['ids']))
+            ->values();
+
+        return new LengthAwarePaginator(
+            $payments,
+            $cached['total'],
+            $cached['per_page'],
+            $cached['current_page'],
+            [
+                'path' => request()->url(),
+                'query' => request()->query(),
+            ]
+        );
     }
 
     /**

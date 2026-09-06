@@ -5,6 +5,7 @@ namespace Modules\Tenant\Services\Task;
 use App\Enums\NameOfCache;
 use App\Traits\ApplyFilters;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -59,15 +60,79 @@ class TaskService
     {
         $page = request()->integer('page', 1);
         $perPage = request()->integer('per_page', 15);
-        $cacheKey = $this->genKey($data, 'no_trashed', $page, $perPage);
-        return Cache::tags(NameOfCache::TASK->value)->remember($cacheKey, self::TIME_TTL, function () use ($data) {
-            $tasks = Task::active(Auth::user());
-            if (!empty($data)) {
-                $this->filterData($tasks, $data);
-            }
-            $this->sortData($tasks, $data, ['team_id', 'created_at', 'status', 'priority', 'project_id', 'start_date', 'due_date', 'completed_at']);
-            return $tasks->paginate(15);
-        });
+
+        $cacheKey = $this->genKey(
+            $data,
+            'no_trashed',
+            $page,
+            $perPage
+        );
+
+        $cached = Cache::tags(NameOfCache::TASK->value)
+            ->remember(
+                $cacheKey,
+                self::TIME_TTL,
+                function () use ($data, $perPage) {
+
+                    $tasks = Task::active(Auth::user());
+
+                    if (!empty($data)) {
+                        $this->filterData($tasks, $data);
+                    }
+
+                    $this->sortData(
+                        $tasks,
+                        $data,
+                        [
+                            'team_id',
+                            'created_at',
+                            'status',
+                            'priority',
+                            'project_id',
+                            'start_date',
+                            'due_date',
+                            'completed_at',
+                        ]
+                    );
+
+                    $paginator = $tasks->paginate($perPage);
+
+                    return [
+                        'ids' => $paginator
+                            ->getCollection()
+                            ->pluck('id')
+                            ->all(),
+
+                        'total' => $paginator->total(),
+
+                        'per_page' => $paginator->perPage(),
+
+                        'current_page' => $paginator->currentPage(),
+                    ];
+                }
+            );
+
+        $tasks = Task::active(Auth::user())
+            ->whereIn('id', $cached['ids'])
+            ->get()
+            ->sortBy(
+                fn($task) => array_search(
+                    $task->id,
+                    $cached['ids']
+                )
+            )
+            ->values();
+
+        return new LengthAwarePaginator(
+            $tasks,
+            $cached['total'],
+            $cached['per_page'],
+            $cached['current_page'],
+            [
+                'path' => request()->url(),
+                'query' => request()->query(),
+            ]
+        );
     }
 
     /**
@@ -247,20 +312,80 @@ class TaskService
     public function getAllTrashed(array $data = [])
     {
         $page = request()->integer('page', 1);
-        $perPage = request()->integer('perPage', 15);
-        $caheKey = $this->genKey($data, 'trashed', $page, $perPage);
-        return Cache::tags(NameOfCache::TASK->value)->remember($caheKey, self::TIME_TTL, function () use ($data) {
-            $count = Task::withTrashed()->count();
-            if ($count == 0) {
-                throw new RuntimeException("No trashed tasks.");
-            }
-            $trashedTask = Task::onlyTrashed();
-            if (!empty($data)) {
-                $this->filterData($trashedTask, $data);
-            }
-            $this->sortData($trashedTask, $data, ['team_id', 'created_at', 'status', 'priority', 'project_id', 'start_date', 'due_date', 'completed_at']);
-            return $trashedTask->paginate(15);
-        });
+        $perPage = request()->integer('per_page', 15);
+
+        $cacheKey = $this->genKey(
+            $data,
+            'trashed',
+            $page,
+            $perPage
+        );
+
+        $cached = Cache::tags(NameOfCache::TASK->value)
+            ->remember(
+                $cacheKey,
+                self::TIME_TTL,
+                function () use ($data, $perPage) {
+
+                    $trashedTasks = Task::onlyTrashed();
+
+                    if (!empty($data)) {
+                        $this->filterData($trashedTasks, $data);
+                    }
+
+                    $this->sortData(
+                        $trashedTasks,
+                        $data,
+                        [
+                            'team_id',
+                            'created_at',
+                            'status',
+                            'priority',
+                            'project_id',
+                            'start_date',
+                            'due_date',
+                            'completed_at',
+                        ]
+                    );
+
+                    $paginator = $trashedTasks->paginate($perPage);
+
+                    return [
+                        'ids' => $paginator
+                            ->getCollection()
+                            ->pluck('id')
+                            ->all(),
+
+                        'total' => $paginator->total(),
+
+                        'per_page' => $paginator->perPage(),
+
+                        'current_page' => $paginator->currentPage(),
+                    ];
+                }
+            );
+
+        $tasks = Task::onlyTrashed()
+            ->whereIn('id', $cached['ids'])
+            ->get()
+            ->sortBy(
+                fn($task) => array_search(
+                    $task->id,
+                    $cached['ids']
+                )
+            )
+            ->values();
+
+        return new LengthAwarePaginator(
+            $tasks,
+            $cached['total'],
+            $cached['per_page'],
+            $cached['current_page'],
+            [
+                'path' => request()->url(),
+                'query' => request()->query(),
+            ]
+        );
     }
 
     /**

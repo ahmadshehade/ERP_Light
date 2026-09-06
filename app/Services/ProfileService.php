@@ -8,6 +8,7 @@ use App\Jobs\ProcessProfileMediaJob;
 use App\Models\Profile;
 use App\Traits\ApplyFilters;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -23,12 +24,31 @@ class ProfileService
     /**
      * Generate cache key.
      */
-    private function generateCacheKey(array $data = []): string
-    {
+    private function generateCacheKey(
+        array $data = [],
+        int $page = 1,
+        int $perPage = 15
+    ): string {
         $user = Auth::user();
-        $userKey = $user ? $user->id . "_" . implode("_", $user->roles->pluck('name')->sort()->toArray()) : "";
-        $cacheKey = $userKey . "_" . NameOfCache::PROFILE->value . "_" . md5(json_encode($data));
-        return $cacheKey;
+
+        $userKey = $user
+            ? $user->id . '_' . implode(
+                '_',
+                $user->roles->pluck('name')->sort()->toArray()
+            )
+            : '';
+
+        $cacheData = [
+            'filters' => $data,
+            'page' => $page,
+            'per_page' => $perPage,
+        ];
+
+        return $userKey
+            . '_'
+            . NameOfCache::PROFILE->value
+            . '_'
+            . md5(json_encode($cacheData));
     }
 
     /**
@@ -42,22 +62,87 @@ class ProfileService
     /**
      * Get all profiles
      */
-    public function getAllProfiles(array $data = []): array
+    public function getAllProfiles(array $data = [])
     {
-        $cacheKey = $this->generateCacheKey($data);
-        return Cache::tags([NameOfCache::PROFILE->value])
-            ->remember($cacheKey, self::CACHE_TTL, function () use ($data) {
-                $query = Profile::query()->with([
-                    'user' => function ($query) {
-                        $query->withTrashed();
-                    }
-                ]);
+        $page = request()->integer('page', 1);
+        $perPage = 15;
+
+        $cacheKey = $this->generateCacheKey(
+            $data,
+            $page,
+            $perPage
+        );
+
+        $cached = Cache::tags([
+            NameOfCache::PROFILE->value
+        ])->remember(
+            $cacheKey,
+            self::CACHE_TTL,
+            function () use ($data, $perPage) {
+
+                $query = Profile::query()
+                    ->with([
+                        'user' => function ($query) {
+                            $query->withTrashed();
+                        }
+                    ]);
+
                 if (!empty($data)) {
                     $this->filterData($query, $data);
                 }
-                $this->sortData($query, $data, ['created_at', 'updated_at']);
-                return $query->paginate(15)->toArray();
-            });
+
+                $this->sortData(
+                    $query,
+                    $data,
+                    [
+                        'created_at',
+                        'updated_at',
+                    ]
+                );
+
+                $paginator = $query->paginate($perPage);
+
+                return [
+                    'ids' => $paginator
+                        ->getCollection()
+                        ->pluck('id')
+                        ->all(),
+
+                    'total' => $paginator->total(),
+
+                    'per_page' => $paginator->perPage(),
+
+                    'current_page' => $paginator->currentPage(),
+                ];
+            }
+        );
+
+        $profiles = Profile::query()
+            ->with([
+                'user' => function ($query) {
+                    $query->withTrashed();
+                }
+            ])
+            ->whereIn('id', $cached['ids'])
+            ->get()
+            ->sortBy(
+                fn($profile) => array_search(
+                    $profile->id,
+                    $cached['ids']
+                )
+            )
+            ->values();
+
+        return new LengthAwarePaginator(
+            $profiles,
+            $cached['total'],
+            $cached['per_page'],
+            $cached['current_page'],
+            [
+                'path' => request()->url(),
+                'query' => request()->query(),
+            ]
+        );
     }
     /**
      * Get profile

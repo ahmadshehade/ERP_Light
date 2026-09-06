@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Modules\Tenant\Models\Position;
 use App\Exceptions\BusinessRuleException;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class PositionService
 {
@@ -48,19 +49,68 @@ class PositionService
      * @param array $data
      * @return array
      */
-    public function getAll(array $data = []): array
+    public function getAll(array $data = [])
     {
         $page = request()->integer('page', 1);
         $perPage = request()->integer('per_page', 15);
-        $cacheKey = $this->genKey($data, 'no_trashed', $page, $perPage);
-        return Cache::tags(NameOfCache::POSITION->value)->remember($cacheKey, self::TIME_TTL, function () use ($data) {
-            $positions = Position::active(Auth::user());
-            if (!empty($data)) {
-                $this->filterData($positions, $data);
-            }
-            $this->sortData($positions, $data, ['name', 'created_at']);
-            return $positions->paginate(15)->toArray();
-        });
+
+        $cacheKey = $this->genKey(
+            $data,
+            'no_trashed',
+            $page,
+            $perPage
+        );
+
+        $cached = Cache::tags(NameOfCache::POSITION->value)
+            ->remember(
+                $cacheKey,
+                self::TIME_TTL,
+                function () use ($data, $perPage) {
+
+                    $positions = Position::active(Auth::user());
+
+                    if (!empty($data)) {
+                        $this->filterData($positions, $data);
+                    }
+
+                    $this->sortData(
+                        $positions,
+                        $data,
+                        ['name', 'created_at']
+                    );
+
+                    $paginator = $positions->paginate($perPage);
+
+                    return [
+                        'ids' => $paginator->getCollection()->pluck('id')->all(),
+                        'total' => $paginator->total(),
+                        'per_page' => $paginator->perPage(),
+                        'current_page' => $paginator->currentPage(),
+                    ];
+                }
+            );
+
+        $positions = Position::active(Auth::user())
+            ->whereIn('id', $cached['ids'])
+            ->get()
+            ->sortBy(
+                fn($position) => array_search(
+                    $position->id,
+                    $cached['ids']
+                )
+            )
+            ->values();
+
+        return new LengthAwarePaginator(
+            $positions,
+            $cached['total'],
+            $cached['per_page'],
+            $cached['current_page'],
+            [
+                'path' => request()->url(),
+                'query' => request()->query(),
+            ]
+        );
     }
 
     /**
@@ -196,19 +246,68 @@ class PositionService
      * @return array
      *
      */
-    public function getAllTrashed(array $data = []): array
+    public function getAllTrashed(array $data = [])
     {
         $page = request()->integer('page', 1);
         $perPage = request()->integer('per_page', 15);
-        $cacheKey = $this->genKey($data, 'trashed', $page, $perPage);
-        return Cache::tags(NameOfCache::POSITION->value)->remember($cacheKey, self::TIME_TTL, function () use ($data) {
-            $positions = Position::onlyTrashed();
-            if (!empty($data)) {
-                $this->filterData($positions, $data);
-            }
-            $this->sortData($positions, $data, ['name', 'created_at']);
-            return $positions->paginate(15)->toArray();
-        });
+
+        $cacheKey = $this->genKey(
+            $data,
+            'trashed',
+            $page,
+            $perPage
+        );
+
+        $cached = Cache::tags(NameOfCache::POSITION->value)
+            ->remember(
+                $cacheKey,
+                self::TIME_TTL,
+                function () use ($data, $perPage) {
+
+                    $positions = Position::onlyTrashed();
+
+                    if (!empty($data)) {
+                        $this->filterData($positions, $data);
+                    }
+
+                    $this->sortData(
+                        $positions,
+                        $data,
+                        ['name', 'created_at']
+                    );
+
+                    $paginator = $positions->paginate($perPage);
+
+                    return [
+                        'ids' => $paginator->getCollection()->pluck('id')->all(),
+                        'total' => $paginator->total(),
+                        'per_page' => $paginator->perPage(),
+                        'current_page' => $paginator->currentPage(),
+                    ];
+                }
+            );
+
+        $positions = Position::onlyTrashed()
+            ->whereIn('id', $cached['ids'])
+            ->get()
+            ->sortBy(
+                fn($position) => array_search(
+                    $position->id,
+                    $cached['ids']
+                )
+            )
+            ->values();
+
+        return new LengthAwarePaginator(
+            $positions,
+            $cached['total'],
+            $cached['per_page'],
+            $cached['current_page'],
+            [
+                'path' => request()->url(),
+                'query' => request()->query(),
+            ]
+        );
     }
 
 

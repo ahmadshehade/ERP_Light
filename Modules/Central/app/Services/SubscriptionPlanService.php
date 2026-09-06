@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 use Modules\Central\Models\SubscriptionPlan;
 use Modules\Central\Services\SubscriptionPlans\SubscriptionPlanNotification;
 use App\Exceptions\BusinessRuleException;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class SubscriptionPlanService
 {
@@ -69,6 +70,7 @@ class SubscriptionPlanService
     {
         $page = request()->integer('page', 1);
         $perPage = request()->integer('per_page', 15);
+
         $cacheKey = $this->genKey(
             $data,
             "_no_trashed_",
@@ -76,27 +78,56 @@ class SubscriptionPlanService
             $perPage
         );
 
-        return Cache::tags(NameOfCache::SUBSCRIPTION_PLAN->value)
+        $cached = Cache::tags(NameOfCache::SUBSCRIPTION_PLAN->value)
             ->remember(
                 $cacheKey,
                 self::CACHE_TTL,
                 function () use ($data, $perPage) {
+
                     $plans = SubscriptionPlan::query()
                         ->active(Auth::user());
+
                     if (!empty($data)) {
                         $this->filterData($plans, $data);
                     }
+
                     $this->sortData(
                         $plans,
                         $data,
                         ['name', 'created_at']
                     );
-                    return $plans
-                        ->paginate($perPage);
+
+                    $paginator = $plans->paginate($perPage);
+
+                    return [
+                        'ids' => $paginator->getCollection()->pluck('id')->all(),
+                        'total' => $paginator->total(),
+                        'per_page' => $paginator->perPage(),
+                        'current_page' => $paginator->currentPage(),
+                    ];
                 }
             );
-    }
 
+        $plans = SubscriptionPlan::query()
+            ->active(Auth::user())
+            ->whereIn('id', $cached['ids'])
+            ->get()
+            ->sortBy(
+                fn($plan) => array_search($plan->id, $cached['ids'])
+            )
+            ->values();
+
+        return new LengthAwarePaginator(
+            $plans,
+            $cached['total'],
+            $cached['per_page'],
+            $cached['current_page'],
+            [
+                'path' => request()->url(),
+                'query' => request()->query(),
+            ]
+        );
+    }
     /**
      * Summary of get
      * @param SubscriptionPlan $subscriptionPlan
@@ -242,25 +273,67 @@ class SubscriptionPlanService
      * @param array $data
      * @return array
      */
-    public  function viewTrashedPlans(array $data = [])
+    public function viewTrashedPlans(array $data = [])
     {
-
         $page = request()->integer('page', 1);
         $perPage = request()->integer('per_page', 15);
+
         $cacheKey = $this->genKey(
             $data,
-            "_no_trashed_",
+            "_trashed_",
             $page,
             $perPage
         );
-        return Cache::tags(NameOfCache::SUBSCRIPTION_PLAN->value)->remember($cacheKey, self::CACHE_TTL, function () use ($data) {
-            $plans = SubscriptionPlan::query()->onlyTrashed()->active(Auth::user());
-            if (! empty($data)) {
-                $this->filterData($plans, $data);
-            }
-            $this->sortData($plans, $data, ['name', 'created_at']);
-            return $plans->paginate(15);
-        });
+
+        $cached = Cache::tags(NameOfCache::SUBSCRIPTION_PLAN->value)
+            ->remember(
+                $cacheKey,
+                self::CACHE_TTL,
+                function () use ($data, $perPage) {
+
+                    $plans = SubscriptionPlan::onlyTrashed()
+                        ->active(Auth::user());
+
+                    if (!empty($data)) {
+                        $this->filterData($plans, $data);
+                    }
+
+                    $this->sortData(
+                        $plans,
+                        $data,
+                        ['name', 'created_at']
+                    );
+
+                    $paginator = $plans->paginate($perPage);
+
+                    return [
+                        'ids' => $paginator->getCollection()->pluck('id')->all(),
+                        'total' => $paginator->total(),
+                        'per_page' => $paginator->perPage(),
+                        'current_page' => $paginator->currentPage(),
+                    ];
+                }
+            );
+
+        $plans = SubscriptionPlan::onlyTrashed()
+            ->active(Auth::user())
+            ->whereIn('id', $cached['ids'])
+            ->get()
+            ->sortBy(
+                fn($plan) => array_search($plan->id, $cached['ids'])
+            )
+            ->values();
+
+        return new LengthAwarePaginator(
+            $plans,
+            $cached['total'],
+            $cached['per_page'],
+            $cached['current_page'],
+            [
+                'path' => request()->url(),
+                'query' => request()->query(),
+            ]
+        );
     }
 
     /**

@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Cache;
 use Modules\Tenant\Enum\TenantRoles;
 use Modules\Tenant\Models\TenantUser;
 use App\Exceptions\BusinessRuleException;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Spatie\Permission\Models\Role;
 
 class RoleService
@@ -43,22 +44,66 @@ class RoleService
     public function getAll(array $data = [])
     {
         $page = request()->integer('page', 1);
-        $perPage = request()->integer('perPage', 15);
+        $perPage = request()->integer('per_page', 15);
+
         $cacheKey = $this->genKey($data, $page, $perPage);
-        return Cache::tags([
+
+        $cached = Cache::tags([
             NameOfCache::TENANT_ROLE->value
         ])->remember(
             $cacheKey,
             now()->addHours(24),
-            function () use ($data) {
+            function () use ($data, $perPage) {
+
                 $roles = Role::query();
 
                 if (!empty($data)) {
                     $this->filterData($roles, $data);
                 }
-                $this->sortData($roles, $data, ['name', 'created_at']);
-                return $roles->paginate(15);
+
+                $this->sortData(
+                    $roles,
+                    $data,
+                    ['name', 'created_at']
+                );
+
+                $paginator = $roles->paginate($perPage);
+
+                return [
+                    'ids' => $paginator
+                        ->getCollection()
+                        ->pluck('id')
+                        ->all(),
+
+                    'total' => $paginator->total(),
+
+                    'per_page' => $paginator->perPage(),
+
+                    'current_page' => $paginator->currentPage(),
+                ];
             }
+        );
+
+        $roles = Role::query()
+            ->whereIn('id', $cached['ids'])
+            ->get()
+            ->sortBy(
+                fn($role) => array_search(
+                    $role->id,
+                    $cached['ids']
+                )
+            )
+            ->values();
+
+        return new LengthAwarePaginator(
+            $roles,
+            $cached['total'],
+            $cached['per_page'],
+            $cached['current_page'],
+            [
+                'path' => request()->url(),
+                'query' => request()->query(),
+            ]
         );
     }
 

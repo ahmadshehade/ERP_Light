@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 use Modules\Tenant\Jobs\ProcessProjectMediaJob;
 use Modules\Tenant\Models\Project;
 use App\Exceptions\BusinessRuleException;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Arr;
 use Modules\Tenant\Enum\ProjectStatus;
 use Modules\Tenant\Enum\TaskStatus;
@@ -56,15 +57,74 @@ class ProjectService
     {
         $page = request()->integer('page', 1);
         $perPage = request()->integer('per_page', 15);
-        $cacheKey = $this->genKey($data, 'no_trashed', $page, $perPage);
-        return Cache::tags(NameOfCache::PROJECT->value)->remember($cacheKey, self::TIME_TTL, function () use ($data) {
-            $projects = Project::active(Auth::user())->with('tasks', 'media');
-            if (!empty($data)) {
-                $this->filterData($projects, $data);
-            }
-            $this->sortData($projects, $data, ['name', 'description', 'created_at', 'start_date', 'end_date', 'priority', 'status']);
-            return $projects->paginate(15);
-        });
+
+        $cacheKey = $this->genKey(
+            $data,
+            'no_trashed',
+            $page,
+            $perPage
+        );
+
+        $cached = Cache::tags(NameOfCache::PROJECT->value)
+            ->remember(
+                $cacheKey,
+                self::TIME_TTL,
+                function () use ($data, $perPage) {
+
+                    $projects = Project::active(Auth::user())
+                        ->with('tasks', 'media');
+
+                    if (!empty($data)) {
+                        $this->filterData($projects, $data);
+                    }
+
+                    $this->sortData(
+                        $projects,
+                        $data,
+                        [
+                            'name',
+                            'description',
+                            'created_at',
+                            'start_date',
+                            'end_date',
+                            'priority',
+                            'status',
+                        ]
+                    );
+
+                    $paginator = $projects->paginate($perPage);
+
+                    return [
+                        'ids' => $paginator->getCollection()->pluck('id')->all(),
+                        'total' => $paginator->total(),
+                        'per_page' => $paginator->perPage(),
+                        'current_page' => $paginator->currentPage(),
+                    ];
+                }
+            );
+
+        $projects = Project::active(Auth::user())
+            ->with('tasks', 'media')
+            ->whereIn('id', $cached['ids'])
+            ->get()
+            ->sortBy(
+                fn($project) => array_search(
+                    $project->id,
+                    $cached['ids']
+                )
+            )
+            ->values();
+
+        return new LengthAwarePaginator(
+            $projects,
+            $cached['total'],
+            $cached['per_page'],
+            $cached['current_page'],
+            [
+                'path' => request()->url(),
+                'query' => request()->query(),
+            ]
+        );
     }
 
     /**
@@ -267,19 +327,78 @@ class ProjectService
      * @param array $data
      * @return array
      */
-    public function getAllTrashed(array $data)
+    public function getAllTrashed(array $data = [])
     {
         $page = request()->integer('page', 1);
         $perPage = request()->integer('per_page', 15);
-        $cacheKey = $this->genKey($data, 'trashed', $page, $perPage);
-        return Cache::tags(NameOfCache::PROJECT->value)->remember($cacheKey, self::TIME_TTL, function () use ($data) {
-            $projects = Project::onlyTrashed()->with('media', 'tasks');
-            if (!empty($data)) {
-                $this->filterData($projects, $data);
-            }
-            $this->sortData($projects, $data, ['name', 'description', 'created_at', 'start_date', 'end_date', 'priority', 'status']);
-            return $projects->paginate(15);
-        });
+
+        $cacheKey = $this->genKey(
+            $data,
+            'trashed',
+            $page,
+            $perPage
+        );
+
+        $cached = Cache::tags(NameOfCache::PROJECT->value)
+            ->remember(
+                $cacheKey,
+                self::TIME_TTL,
+                function () use ($data, $perPage) {
+
+                    $projects = Project::onlyTrashed()
+                        ->with('media', 'tasks');
+
+                    if (!empty($data)) {
+                        $this->filterData($projects, $data);
+                    }
+
+                    $this->sortData(
+                        $projects,
+                        $data,
+                        [
+                            'name',
+                            'description',
+                            'created_at',
+                            'start_date',
+                            'end_date',
+                            'priority',
+                            'status',
+                        ]
+                    );
+
+                    $paginator = $projects->paginate($perPage);
+
+                    return [
+                        'ids' => $paginator->getCollection()->pluck('id')->all(),
+                        'total' => $paginator->total(),
+                        'per_page' => $paginator->perPage(),
+                        'current_page' => $paginator->currentPage(),
+                    ];
+                }
+            );
+
+        $projects = Project::onlyTrashed()
+            ->with('media', 'tasks')
+            ->whereIn('id', $cached['ids'])
+            ->get()
+            ->sortBy(
+                fn($project) => array_search(
+                    $project->id,
+                    $cached['ids']
+                )
+            )
+            ->values();
+
+        return new LengthAwarePaginator(
+            $projects,
+            $cached['total'],
+            $cached['per_page'],
+            $cached['current_page'],
+            [
+                'path' => request()->url(),
+                'query' => request()->query(),
+            ]
+        );
     }
 
     /**

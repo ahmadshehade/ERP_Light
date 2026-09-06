@@ -30,6 +30,7 @@ class Payment extends Model
         'status' => PaymentStatus::class,
         'amount' => 'decimal:2',
         'metadata' => 'array',
+        'paid_at' => 'datetime',
     ];
 
 

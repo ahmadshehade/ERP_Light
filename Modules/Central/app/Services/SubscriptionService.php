@@ -17,6 +17,7 @@ use Modules\Central\Models\SubscriptionPrice;
 use Modules\Central\Services\Payments\PaymentService;
 use App\Exceptions\BusinessRuleException;
 use App\Models\User;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Modules\Central\Services\Payments\StripePaymentService;
 use Modules\Central\Services\Subscriptions\SubscriptionNotificationService;
 use Illuminate\Support\Facades\Log;
@@ -50,7 +51,7 @@ class SubscriptionService
         $cacheData = [
             'filters' => $data,
             'page' => $page,
-            'perpage' => $perPage
+            'per_page' => $perPage
         ];
         return $userKey . "_" . NameOfCache::SUBSCRIPTION->value . "_" . md5(json_encode($cacheData));
     }
@@ -68,21 +69,80 @@ class SubscriptionService
     {
         $page = request()->integer('page', 1);
         $perPage = request()->integer('per_page', 15);
-        $cacheKey = $this->genKey($data, '_no_trashed_', $page, $perPage);
-        return Cache::tags(NameOfCache::SUBSCRIPTION->value)
-            ->remember($cacheKey, 60, function () use ($data) {
 
-                $query = Subscription::userSubscriptions(Auth::user())
-                    ->with([
-                        'company.owner',
-                        'price'
-                    ]);
-                if (!empty($data)) {
-                    $this->filterData($query, $data);
+        $cacheKey = $this->genKey(
+            $data,
+            '_no_trashed_',
+            $page,
+            $perPage
+        );
+
+        $cached = Cache::tags(NameOfCache::SUBSCRIPTION->value)
+            ->remember(
+                $cacheKey,
+                60,
+                function () use ($data, $perPage) {
+
+                    $query = Subscription::userSubscriptions(Auth::user())
+                        ->with([
+                            'company.owner',
+                            'price',
+                        ]);
+
+                    if (!empty($data)) {
+                        $this->filterData($query, $data);
+                    }
+
+                    $this->sortData(
+                        $query,
+                        $data,
+                        [
+                            'company_id',
+                            'status',
+                            'created_at',
+                            'end_date',
+                            'trial_end_date',
+                            'canceled_at',
+                            'start_date',
+                        ]
+                    );
+
+                    $paginator = $query->paginate($perPage);
+
+                    return [
+                        'ids' => $paginator->getCollection()->pluck('id')->all(),
+                        'total' => $paginator->total(),
+                        'per_page' => $paginator->perPage(),
+                        'current_page' => $paginator->currentPage(),
+                    ];
                 }
-                $this->sortData($query, $data, ['company_id', 'status', 'created_at', 'end_date', 'trial_end_date', 'canceled_at', 'start_date']);
-                return $query->paginate(15);
-            });
+            );
+
+        $subscriptions = Subscription::userSubscriptions(Auth::user())
+            ->with([
+                'company.owner',
+                'price',
+            ])
+            ->whereIn('id', $cached['ids'])
+            ->get()
+            ->sortBy(
+                fn($subscription) => array_search(
+                    $subscription->id,
+                    $cached['ids']
+                )
+            )
+            ->values();
+
+        return new LengthAwarePaginator(
+            $subscriptions,
+            $cached['total'],
+            $cached['per_page'],
+            $cached['current_page'],
+            [
+                'path' => request()->url(),
+                'query' => request()->query(),
+            ]
+        );
     }
     /**
      * Get single subscription
@@ -347,21 +407,82 @@ class SubscriptionService
     {
         $page = request()->integer('page', 1);
         $perPage = request()->integer('per_page', 15);
-        $cacheKey = $this->genKey($data, '_trashed_', $page, $perPage);
-        return Cache::tags(NameOfCache::SUBSCRIPTION->value)
-            ->remember($cacheKey, 60, function () use ($data) {
-                $query = Subscription::onlyTrashed()
-                    ->userSubscriptions(Auth::user())
-                    ->with([
-                        'company.owner',
-                        'price'
-                    ]);
-                if (!empty($data)) {
-                    $this->filterData($query, $data);
+
+        $cacheKey = $this->genKey(
+            $data,
+            '_trashed_',
+            $page,
+            $perPage
+        );
+
+        $cached = Cache::tags(NameOfCache::SUBSCRIPTION->value)
+            ->remember(
+                $cacheKey,
+                60,
+                function () use ($data, $perPage) {
+
+                    $query = Subscription::onlyTrashed()
+                        ->userSubscriptions(Auth::user())
+                        ->with([
+                            'company.owner',
+                            'price',
+                        ]);
+
+                    if (!empty($data)) {
+                        $this->filterData($query, $data);
+                    }
+
+                    $this->sortData(
+                        $query,
+                        $data,
+                        [
+                            'company_id',
+                            'status',
+                            'created_at',
+                            'end_date',
+                            'trial_end_date',
+                            'canceled_at',
+                            'start_date',
+                        ]
+                    );
+
+                    $paginator = $query->paginate($perPage);
+
+                    return [
+                        'ids' => $paginator->getCollection()->pluck('id')->all(),
+                        'total' => $paginator->total(),
+                        'per_page' => $paginator->perPage(),
+                        'current_page' => $paginator->currentPage(),
+                    ];
                 }
-                $this->sortData($query, $data, ['company_id', 'status', 'created_at', 'end_date', 'trial_end_date', 'canceled_at', 'start_date']);
-                return $query->paginate(15);
-            });
+            );
+
+        $subscriptions = Subscription::onlyTrashed()
+            ->userSubscriptions(Auth::user())
+            ->with([
+                'company.owner',
+                'price',
+            ])
+            ->whereIn('id', $cached['ids'])
+            ->get()
+            ->sortBy(
+                fn($subscription) => array_search(
+                    $subscription->id,
+                    $cached['ids']
+                )
+            )
+            ->values();
+
+        return new LengthAwarePaginator(
+            $subscriptions,
+            $cached['total'],
+            $cached['per_page'],
+            $cached['current_page'],
+            [
+                'path' => request()->url(),
+                'query' => request()->query(),
+            ]
+        );
     }
     /**
      * Get single trashed subscription
