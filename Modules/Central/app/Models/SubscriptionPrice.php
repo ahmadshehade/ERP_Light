@@ -37,7 +37,9 @@ class SubscriptionPrice extends Model
         return [
             'interval' => PriceInterval::class,
             'is_active' => 'boolean',
-            'price' => 'decimal:2'
+            'price' => 'decimal:2',
+            'has_trial' => 'boolean',
+
         ];
     }
 

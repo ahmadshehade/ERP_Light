@@ -143,7 +143,7 @@ class UpdateCompanyRequest extends BaseRequest
             'max_users' => 'Maximum Number of Users',
             'is_active' => 'Status',
             'regex' => 'Regex',
-            'is_active' => 'Status',
+
 
         ];
     }

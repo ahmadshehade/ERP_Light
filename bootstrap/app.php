@@ -56,15 +56,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 'message' => $e->getMessage(),
             ], 401);
         });
-        $exceptions->render(function (
-            \Throwable $e,
-            Request $request
-        ) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], 500);
-        });
+
         $exceptions->render(function (
             AuthorizationException $e,
             Request $request
@@ -163,6 +155,16 @@ return Application::configure(basePath: dirname(__DIR__))
                 'message' => $e->getMessage(),
                 'errors' => $e->errors()
             ], 422);
+        });
+
+        $exceptions->render(function (
+            \Throwable $e,
+            Request $request
+        ) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 500);
         });
     })
 

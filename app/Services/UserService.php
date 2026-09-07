@@ -179,6 +179,7 @@ class UserService
     public function forceDelete(User $user): bool
     {
         DB::transaction(function () use ($user) {
+
             if ($user->trashed()) {
                 $user->forceDelete();
             } else {
@@ -316,14 +317,16 @@ class UserService
     public function emptyTrash(): bool
     {
         DB::transaction(function () {
-            $users = User::onlyTrashed()->get();
-            if ($users->count() > 0) {
-                $users->forceDelete();
+
+            if (User::onlyTrashed()->count() > 0) {
+                User::onlyTrashed()->forceDelete();
             } else {
                 throw new HttpClientException('No trashed users found.');
             }
         });
+
         $this->clearUserCache();
+
         return true;
     }
 

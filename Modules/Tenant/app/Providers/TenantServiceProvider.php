@@ -48,6 +48,9 @@ class TenantServiceProvider extends ModuleServiceProvider
      */
     protected function configureSchedules(Schedule $schedule): void
     {
+        if (app()->environment('testing')) {
+            return;
+        }
         $schedule->command('tenant:process-scheduled-tasks')->everySecond();
         $schedule->command('tenant:process-scheduled-projects')->everyTwoHours();
     }

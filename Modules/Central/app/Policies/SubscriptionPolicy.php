@@ -3,7 +3,6 @@
 namespace Modules\Central\Policies;
 
 use App\Enums\PermissionManagementPermissions;
-use App\Enums\SubscriptionStatus;
 use App\Models\User;
 use App\Policies\BasePolicy;
 use Modules\Central\Models\Subscription;
@@ -42,34 +41,32 @@ class SubscriptionPolicy extends BasePolicy
 
     /**
      * Determine whether the user can update the model.
+     *
+     * Authorization only.
+     * Subscription status is handled by the service layer.
      */
     public function update(
         User $user,
         Subscription $subscription
     ): bool {
-        return (
-            $user->can(
-                PermissionManagementPermissions::UpdateSubscriptions
-            )
-            || $user->id === $subscription->company->owner_id
-        )
-            && $subscription->status === SubscriptionStatus::PENDING;
+        return $user->can(
+            PermissionManagementPermissions::UpdateSubscriptions->value
+        ) || $user->id === $subscription->company->owner_id;
     }
 
     /**
      * Determine whether the user can delete the model.
+     *
+     * Authorization only.
+     * Subscription status is handled by the service layer.
      */
     public function delete(
         User $user,
         Subscription $subscription
     ): bool {
-        return (
-            $user->can(
-                PermissionManagementPermissions::DeleteSubscriptions->value
-            )
-            || $user->id === $subscription->company->owner_id
-        )
-            && $subscription->status === SubscriptionStatus::PENDING->value;
+        return $user->can(
+            PermissionManagementPermissions::DeleteSubscriptions->value
+        ) || $user->id === $subscription->company->owner_id;
     }
 
     /**

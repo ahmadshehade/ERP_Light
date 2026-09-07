@@ -21,7 +21,7 @@ class StoreSubscriptionPriceRequest extends FormRequest
             'stripe_price_id' => ['nullable', 'integer', 'max:170'],
             'is_active' => ['sometimes', 'boolean'],
             'has_trial' => ['sometimes', 'boolean'],
-            'traily_days' => ['sometimes', 'nullable', 'integer', 'min:0'],
+            'trial_days' => ['sometimes', 'nullable', 'integer', 'min:0'],
         ];
     }
 

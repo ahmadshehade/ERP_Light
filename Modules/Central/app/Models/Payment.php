@@ -64,15 +64,24 @@ class Payment extends Model
     }
 
 
-    public function scopeOwnerPaymnets(Builder $query, User $user): Builder
-    {
+
+    public function scopeOwnerPaymnets(
+        Builder $query,
+        User $user
+    ): Builder {
         if ($user->hasRole(NameOfRoles::SuperAdmin->value)) {
             return $query;
         }
-        return $query->whereHas('subscription.price.plan', function ($q) use ($user) {
-            return $q->where('owner_id', $user->id);
-        });
+
+        if ($user->hasRole(NameOfRoles::Owner->value)) {
+            return $query->whereHas('subscription.company', function ($q) use ($user) {
+                $q->where('owner_id', $user->id);
+            });
+        }
+
+        return $query->whereRaw('1 = 0');
     }
+
 
 
 

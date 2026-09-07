@@ -283,9 +283,7 @@ class SubscriptionService
                         ]);
                     }
 
-                    $this->paymentService->update($oldPayment, [
-                        'status' => PaymentStatus::CANCELED,
-                    ]);
+                    $this->paymentService->cancelPending($oldPayment);
                 }
                 $newPayment = $this->paymentService->store([
                     'subscription_id' => $subscription->id,
@@ -356,6 +354,12 @@ class SubscriptionService
     public function destroy(Subscription $subscription): bool
     {
         return DB::transaction(function () use ($subscription) {
+            if ($subscription->status !== SubscriptionStatus::PENDING) {
+                throw new BusinessRuleException(
+                    'Only pending subscriptions can be deleted.',
+                    409
+                );
+            }
             $subscription->delete();
             $this->flushCache();
             return true;

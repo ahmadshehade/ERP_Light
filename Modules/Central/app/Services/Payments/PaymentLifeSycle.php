@@ -378,7 +378,11 @@ class PaymentLifeSycle
 
             $subscriptionId = $payment->subscription->id;
 
-            DB::afterCommit(function () use ($subscriptionId, $payment) {
+            DB::afterCommit(function () use (
+                $subscriptionId,
+                $payment,
+                $stripeRefund
+            ) {
 
                 $this->paymentNotificaition
                     ->refundPayment($subscriptionId);

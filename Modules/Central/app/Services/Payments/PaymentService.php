@@ -337,4 +337,35 @@ class PaymentService
         }
         return $payment->load('subscription.company.owner');
     }
+
+
+    public function cancelPending(Payment $payment): Payment
+    {
+        return DB::transaction(function () use ($payment) {
+
+            $payment = Payment::query()
+                ->lockForUpdate()
+                ->findOrFail($payment->id);
+
+            if ($payment->status !== PaymentStatus::PENDING) {
+                throw new BusinessRuleException(
+                    'Only pending payments can be canceled.',
+                    409
+                );
+            }
+
+            $payment->update([
+                'status' => PaymentStatus::CANCELED->value,
+            ]);
+
+            DB::afterCommit(function () {
+                $this->flushCache();
+            });
+
+            return $payment->fresh([
+                'subscription.company.owner',
+                'subscription.price',
+            ]);
+        }, 5);
+    }
 }

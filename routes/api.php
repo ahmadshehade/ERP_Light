@@ -34,7 +34,8 @@ Route::prefix('v1')->group(function () {
     Route::middleware('auth:sanctum')->prefix('users')->group(function () {
 
 
-        Route::delete('/force_delete/{user}', [UserController::class, 'forceDelete'])->name('users.force_delete');
+        Route::delete('/force_delete/{user}', [UserController::class, 'forceDelete'])
+            ->withTrashed()->name('users.force_delete');
         Route::post('/restore/{user}', [UserController::class, 'restore'])
             ->name('users.restore')->withTrashed();
         Route::get('/trashed-users', [UserController::class, 'trashedUsers'])->name('users.trashedUsers');
