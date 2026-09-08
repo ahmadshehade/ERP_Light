@@ -4,7 +4,6 @@ namespace Tests\Feature\Services;
 
 use App\Enums\NameOfRoles;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Modules\Central\Models\Company;
 use Modules\Central\Models\Subscription;
@@ -18,11 +17,35 @@ use Tests\TestCase;
 
 class TenantProvisioningServiceTest extends TestCase
 {
-    use RefreshDatabase;
-
     protected TenantProvisioningService $service;
 
+    /**
+     * Tenants created by the current test.
+     *
+     * @var array<int, Tenant>
+     */
     protected array $createdTenants = [];
+
+    /**
+     * Central companies created by the current test.
+     *
+     * @var array<int, Company>
+     */
+    protected array $createdCompanies = [];
+
+    /**
+     * Central users created by the current test.
+     *
+     * @var array<int, User>
+     */
+    protected array $createdUsers = [];
+
+    /**
+     * Central subscription plans created by the current test.
+     *
+     * @var array<int, SubscriptionPlan>
+     */
+    protected array $createdPlans = [];
 
     protected function setUp(): void
     {
@@ -33,13 +56,67 @@ class TenantProvisioningServiceTest extends TestCase
 
     protected function tearDown(): void
     {
+        /*
+         * Delete created tenants first.
+         *
+         * Tenant deletion may remove the tenant database/domain data,
+         * depending on your Stancl Tenancy configuration.
+         */
         foreach ($this->createdTenants as $tenant) {
             try {
                 if ($tenant->exists) {
                     $tenant->delete();
                 }
-            } catch (\Throwable $e) {
-                // Ignore cleanup errors so they don't hide the actual test failure.
+            } catch (\Throwable) {
+                // Ignore cleanup errors so they do not hide the real test failure.
+            }
+        }
+
+        /*
+         * Delete created companies.
+         *
+         * Company may have subscriptions/payments related to it,
+         * so forceDelete is used after tenant cleanup.
+         */
+        foreach ($this->createdCompanies as $company) {
+            try {
+                if ($company->exists) {
+                    $company->forceDelete();
+                }
+            } catch (\Throwable) {
+                // Ignore cleanup errors.
+            }
+        }
+
+        /*
+         * Delete created subscription plans.
+         *
+         * Subscription prices normally belong to these plans, and
+         * the FK cascade should remove the related prices.
+         */
+        foreach ($this->createdPlans as $plan) {
+            try {
+                if ($plan->exists) {
+                    $plan->forceDelete();
+                }
+            } catch (\Throwable) {
+                // Ignore cleanup errors.
+            }
+        }
+
+        /*
+         * Delete created users last.
+         *
+         * This avoids removing a user that may still be referenced
+         * by a company or other central records.
+         */
+        foreach ($this->createdUsers as $user) {
+            try {
+                if ($user->exists) {
+                    $user->forceDelete();
+                }
+            } catch (\Throwable) {
+                // Ignore cleanup errors.
             }
         }
 
@@ -51,11 +128,15 @@ class TenantProvisioningServiceTest extends TestCase
      */
     protected function createUser(): User
     {
-        return User::create([
+        $user = User::create([
             'name' => 'Test User',
             'email' => fake()->unique()->safeEmail(),
             'password' => bcrypt('password'),
         ]);
+
+        $this->createdUsers[] = $user;
+
+        return $user;
     }
 
     /**
@@ -63,12 +144,14 @@ class TenantProvisioningServiceTest extends TestCase
      */
     protected function createCompany(User $owner): Company
     {
+        $name = fake()->unique()->company();
+
         $company = new Company();
 
         $company->forceFill([
             'name' => [
-                'en' => 'Test Company',
-                'ar' => 'شركة اختبار',
+                'en' => $name,
+                'ar' => 'شركة ' . $name,
             ],
             'subdomain' => fake()->unique()->slug(),
             'owner_id' => $owner->id,
@@ -78,7 +161,11 @@ class TenantProvisioningServiceTest extends TestCase
 
         $company->save();
 
-        return $company->fresh();
+        $company = $company->fresh();
+
+        $this->createdCompanies[] = $company;
+
+        return $company;
     }
 
     /**
@@ -86,10 +173,12 @@ class TenantProvisioningServiceTest extends TestCase
      */
     protected function createSubscriptionPrice(): SubscriptionPrice
     {
+        $uniqueName = fake()->unique()->company();
+
         $plan = SubscriptionPlan::create([
             'name' => [
-                'en' => 'Test Plan',
-                'ar' => 'خطة اختبار',
+                'en' => 'Test Plan ' . $uniqueName,
+                'ar' => 'خطة اختبار ' . $uniqueName,
             ],
             'description' => [
                 'en' => 'Test subscription plan',
@@ -97,6 +186,8 @@ class TenantProvisioningServiceTest extends TestCase
             ],
             'is_active' => true,
         ]);
+
+        $this->createdPlans[] = $plan;
 
         return SubscriptionPrice::create([
             'plan_id' => $plan->id,
@@ -207,7 +298,6 @@ class TenantProvisioningServiceTest extends TestCase
          * Verify tenant database and seeded data.
          */
         $tenant->run(function () use ($owner) {
-
             /*
              * Tenant migrations must have created tenant_users.
              */
@@ -288,7 +378,6 @@ class TenantProvisioningServiceTest extends TestCase
          * Owner must still exist only once in tenant_users.
          */
         $firstTenant->run(function () use ($owner) {
-
             $this->assertSame(
                 1,
                 TenantUser::where('user_id', $owner->id)->count()
@@ -344,10 +433,11 @@ class TenantProvisioningServiceTest extends TestCase
          * Remove from cleanup list because it has already
          * been deleted.
          */
-        $this->createdTenants = array_filter(
-            $this->createdTenants,
-            fn(Tenant $createdTenant) =>
-            $createdTenant->id !== $tenantId
+        $this->createdTenants = array_values(
+            array_filter(
+                $this->createdTenants,
+                fn(Tenant $createdTenant) => $createdTenant->id !== $tenantId
+            )
         );
     }
 
@@ -389,7 +479,6 @@ class TenantProvisioningServiceTest extends TestCase
         $this->trackTenant($tenant);
 
         $tenant->run(function () use ($owner) {
-
             $tenantUser = TenantUser::where(
                 'user_id',
                 $owner->id
