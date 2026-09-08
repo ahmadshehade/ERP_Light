@@ -166,8 +166,8 @@ class DepartmentService
             $photo = Arr::pull($data, 'photo', []);
             $department->update($data);
             $path = null;
-            if (isset($data['photo']) && $data['photo'] instanceof UploadedFile) {
-                $path = $data['photo']->store('temp/department/' . $department->id, 'local');
+            if ($photo instanceof UploadedFile) {
+                $path = $photo->store('temp/department/' . $department->id, 'local');
             }
             DB::connection('tenant')->afterCommit(function () use ($department, $path) {
                 $this->clearCache();

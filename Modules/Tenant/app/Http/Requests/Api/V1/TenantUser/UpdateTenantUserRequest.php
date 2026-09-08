@@ -98,7 +98,8 @@ class UpdateTenantUserRequest extends FormRequest
         return [
             'is_active' => 'Active',
             'department_ids.*' => 'Department',
-            'position' => 'Position',
+            'position_ids' => 'Positions',
+            'position_ids.*' => 'Position',
             'team_ids' => 'Teams'
         ];
     }

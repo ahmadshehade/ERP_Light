@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 use Modules\Tenant\Jobs\ProcessProjectMediaJob;
 use Modules\Tenant\Models\Project;
 use App\Exceptions\BusinessRuleException;
+use Closure;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Arr;
 use Modules\Tenant\Enum\ProjectStatus;
@@ -25,6 +26,7 @@ class ProjectService
     public const TIME_TTL = 60;
 
     public function __construct(public ProjectNotificationService $notify) {}
+
 
     /**
      * Summary of genKey

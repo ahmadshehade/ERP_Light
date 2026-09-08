@@ -196,7 +196,7 @@ class TenantUserService
             $tenantUser->departments()->sync($departmentIds);
             $tenantUser->positions()->sync($positionIds);
             $tenantUser->teams()->sync($teamIds);
-            DB::afterCommit(function () use ($tenantUser) {
+            DB::connection('tenant')->afterCommit(function () use ($tenantUser) {
                 $this->flushCache();
                 $this->notify->updateUserTenantNotify($tenantUser);
             });
@@ -220,7 +220,7 @@ class TenantUserService
                 'name' => $tenantUser->user->name,
                 'email' => $tenantUser->user->email,
             ];
-            DB::afterCommit(function () use ($data) {
+            DB::connection('tenant')->afterCommit(function () use ($data) {
                 $this->flushCache();
                 $this->notify->removeUserFromTenantNotify($data);
             });

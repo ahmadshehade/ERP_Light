@@ -31,7 +31,7 @@ class TenantUserPolicy extends TenantBasePolicy
     public function view(User $user, TenantUser $model): bool
     {
         $tenantUser = $this->getTenantUser($user);
-        return $tenantUser->hasPermissionTo(TenantPermission::TenantViewUser->value) && $model->id === $user->id;
+        return $tenantUser->hasPermissionTo(TenantPermission::TenantViewUser->value) && $model->user_id === $user->id;
     }
     /**
      * Summary of create

@@ -18,15 +18,14 @@ class TenantBasePolicy
      * @prama TenantUser $tenantUser
      * @return bool|null
      */
-    public  function  before(User $user): bool|null
+    public function before(User $user): bool|null
     {
-        $tenantUser = TenantUser::query()
-            ->where('user_id', $user->id)
-            ->first();
+        $tenantUser = $this->getTenantUser($user);
 
-        if ($tenantUser->hasRole(TenantRoles::Owner->value)) {
+        if ($tenantUser?->hasRole(TenantRoles::Owner->value)) {
             return true;
         }
+
         return null;
     }
 
