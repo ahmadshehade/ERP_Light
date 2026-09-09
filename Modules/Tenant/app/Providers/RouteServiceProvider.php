@@ -27,6 +27,18 @@ class RouteServiceProvider extends ServiceProvider
 
             return $tenantUser?->hasRole(TenantRoles::Owner->value) ?? false;
         });
+
+        Gate::define('managerJob', function (User $user) {
+            $tenantUser = $user->tenantUsers()
+                ->where('is_active', true)
+                ->first();
+            return $tenantUser?->hasRole(TenantRoles::Manager->value) ?? false;
+        });
+
+        Gate::define('EmployeeJob', function (User $user) {
+            $tenantUser = $user->tenantUsers()->where('is_active', true)->first();
+            return $tenantUser?->hasRole(TenantRoles::Employee->value) ?? false;
+        });
     }
 
     /**

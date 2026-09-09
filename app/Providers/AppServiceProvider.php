@@ -27,5 +27,10 @@ class AppServiceProvider extends ServiceProvider
             return $user->hasRole(NameOfRoles::SuperAdmin->value);
         });
         Sanctum::usePersonalAccessTokenModel(PersonalAccessToken::class);
+
+        Gate::define('ownerJob', function (User $user) {
+
+            return $user->hasRole(NameOfRoles::Owner->value);
+        });
     }
 }

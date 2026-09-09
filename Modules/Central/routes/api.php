@@ -11,6 +11,8 @@ use Modules\Central\Http\Controllers\Api\V1\Central\SubscriptionPriceController;
 
 
 use Modules\Central\Http\Controllers\Api\V1\Central\StripeWebhookController;
+use Modules\Central\Http\Controllers\Api\V1\Dashboards\OwnerDashboardController;
+use Modules\Central\Http\Controllers\Api\V1\Dashboards\SuperAdminDashboardController;
 
 Route::post('/webhooks/stripe', [StripeWebhookController::class, 'handle']);
 
@@ -25,6 +27,16 @@ Route::post('/webhooks/stripe', [StripeWebhookController::class, 'handle']);
 Route::middleware(['auth:sanctum'])->prefix('v1/central')->group(function () {
 
 
+    #################################################  Dashboards  ####################################
+    Route::get(
+        'super-admin/dashboard',
+        [SuperAdminDashboardController::class, 'index']
+    )->middleware('can:adminJob');
+
+    Route::get(
+        'owner/dashboard',
+        [OwnerDashboardController::class, 'index']
+    )->middleware('can:ownerJob');
 
     ################################  Subscription Plan  ####################################
 

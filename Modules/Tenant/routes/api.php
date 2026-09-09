@@ -1,6 +1,9 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Modules\Tenant\Http\Controllers\Api\V1\Dashboard\EmployeeDashboardController;
+use Modules\Tenant\Http\Controllers\Api\V1\Dashboard\ManagerDashboardController;
+use Modules\Tenant\Http\Controllers\Api\V1\Dashboard\OwnerDashboardController;
 use Modules\Tenant\Http\Controllers\Api\V1\DepartmentController;
 use Modules\Tenant\Http\Controllers\Api\V1\PositionController;
 use Modules\Tenant\Http\Controllers\Api\V1\ProjectController;
@@ -17,7 +20,24 @@ Route::middleware([
 ])->prefix('v1')->group(function () {
 
 
-    //tenantUsers
+    //###################################################### Dashboard ######################################################
+    Route::get(
+        'owner/dashboard',
+        [OwnerDashboardController::class, 'index']
+    )->middleware('can:ownerJob');
+
+    Route::get(
+        'manager/dashboard',
+        [ManagerDashboardController::class, 'index']
+    )->middleware('can:managerJob');
+
+    Route::get(
+        'employee/dashboard',
+        [EmployeeDashboardController::class, 'index']
+    )->middleware('can:EmployeeJob');
+
+
+    //###################################################### TenantUser ######################################################
     Route::prefix('tenantUsers')->group(function () {
         Route::get('/', [TenantUserController::class, 'index']);
         Route::post('/', [TenantUserController::class, 'store']);
@@ -26,7 +46,7 @@ Route::middleware([
         Route::delete('/{tenantUser}', [TenantUserController::class, 'destroy']);
     });
 
-    //Roles
+    //###################################################### Roles ######################################################
     Route::prefix('roles')->group(function () {
         Route::get('/', [RoleController::class, 'index'])
             ->name('roles.index');
@@ -47,7 +67,7 @@ Route::middleware([
             ->name('roles.getRoleToTenantUser');
     })->middleware(['can:ownerJob']);
 
-    //permissions
+    //###################################################### Permissions ######################################################
     Route::prefix('permissions')->group(function () {
 
         Route::get('/', [PermissionController::class, 'index'])
@@ -70,7 +90,7 @@ Route::middleware([
     })->middleware(['can:ownerJob']);
 
 
-    //Departments
+    //###################################################### Departments ######################################################
     Route::prefix('departments')->group(function () {
 
 
@@ -100,7 +120,7 @@ Route::middleware([
     });
 
 
-    //Positions
+    //###################################################### Positions ######################################################
     Route::prefix('positions')->group(function () {
 
 
@@ -129,7 +149,8 @@ Route::middleware([
             ->name('position.destroy');
     });
 
-    //Teams
+
+    //###################################################### Teams ######################################################
     Route::prefix('teams')->group(function () {
         Route::get('/', [TeamController::class, 'index'])
             ->name('teams.index');
@@ -143,7 +164,8 @@ Route::middleware([
             ->name('teams.destroy');
     });
 
-    //projects
+
+    //###################################################### Projects ######################################################
 
     Route::prefix('projects')->group(function () {
 
@@ -172,7 +194,7 @@ Route::middleware([
         Route::delete('/{project}', [ProjectController::class, 'destroy'])
             ->name('project.destroy');
 
-        //Actions
+        //Project Actions
         Route::post('/{project}/onhold', [ProjectController::class, 'onHold'])
             ->name('project.onHold');
         Route::post('/{project}/resume', [ProjectController::class, 'resume'])
@@ -183,7 +205,8 @@ Route::middleware([
             ->name('project.complete');
     });
 
-    //Tasks
+
+    //###################################################### Tasks ######################################################
     Route::prefix('tasks')->group(function () {
 
         Route::post('restore-all', [TaskController::class, 'restoreAll'])

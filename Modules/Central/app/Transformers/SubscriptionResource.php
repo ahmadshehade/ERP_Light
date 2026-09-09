@@ -14,11 +14,11 @@ class SubscriptionResource extends JsonResource
     {
         return [
             'id' => $this->id,
-
             'company_id' => $this->company_id,
             'price_id' => $this->price_id,
-
             'status' => $this->status?->value,
+
+            'checkout_url' => $this->checkout_url,
 
             'start_date' => $this->start_date?->toISOString(),
             'end_date' => $this->end_date?->toISOString(),

@@ -1,0 +1,347 @@
+<?php
+
+namespace Modules\Tenant\Services\Dashboards;
+
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
+use Modules\Tenant\Enum\ProjectStatus;
+use Modules\Tenant\Enum\TaskStatus;
+use Modules\Tenant\Enum\TenantRoles;
+use Modules\Tenant\Models\Activity;
+use Modules\Tenant\Models\Department;
+use Modules\Tenant\Models\Position;
+use Modules\Tenant\Models\Project;
+use Modules\Tenant\Models\Task;
+use Modules\Tenant\Models\Team;
+use Modules\Tenant\Models\TenantUser;
+
+class MnangerDashboardService
+{
+    /**
+     * Get the complete Manager Dashboard.
+     */
+    public function getDashboard(): array
+    {
+        $this->getManager();
+
+        return [
+            'role' => TenantRoles::Manager->value,
+
+            'departments' => $this->getDepartmentsStatistics(),
+
+            'positions' => $this->getPositionsStatistics(),
+
+            'teams' => $this->getTeamsStatistics(),
+
+            'projects' => $this->getProjectsStatistics(),
+
+            'tasks' => $this->getTasksStatistics(),
+
+            'activity' => $this->getActivityStatistics(),
+        ];
+    }
+
+    /**
+     * Get the authenticated Tenant Manager.
+     */
+    protected function getManager(): TenantUser
+    {
+        $user = Auth::user();
+
+        $tenantUser = TenantUser::query()
+            ->where('user_id', $user->id)
+            ->firstOrFail();
+
+        abort_unless(
+            $tenantUser->hasRole(TenantRoles::Manager->value),
+            403,
+            'Only the company manager can access this dashboard.'
+        );
+
+        return $tenantUser;
+    }
+
+    /**
+     * Departments statistics.
+     */
+    protected function getDepartmentsStatistics(): array
+    {
+        $query = Department::query();
+
+        $last30Days = Carbon::now()->subDays(30);
+
+        return [
+            'total' => (clone $query)->count(),
+
+            'active' => (clone $query)
+                ->where('is_active', true)
+                ->count(),
+
+            'inactive' => (clone $query)
+                ->where('is_active', false)
+                ->count(),
+
+            'deleted' => (clone $query)
+                ->onlyTrashed()
+                ->count(),
+
+            'new_last_30_days' => (clone $query)
+                ->where('created_at', '>=', $last30Days)
+                ->count(),
+
+            'members' => (clone $query)
+                ->withCount('tenantUsers')
+                ->get()
+                ->sum('tenant_users_count'),
+        ];
+    }
+
+    /**
+     * Positions statistics.
+     */
+    protected function getPositionsStatistics(): array
+    {
+        $query = Position::query();
+
+        $last30Days = Carbon::now()->subDays(30);
+
+        return [
+            'total' => (clone $query)->count(),
+
+            'active' => (clone $query)
+                ->where('is_active', true)
+                ->count(),
+
+            'inactive' => (clone $query)
+                ->where('is_active', false)
+                ->count(),
+
+            'deleted' => (clone $query)
+                ->onlyTrashed()
+                ->count(),
+
+            'new_last_30_days' => (clone $query)
+                ->where('created_at', '>=', $last30Days)
+                ->count(),
+
+            'assigned_users' => (clone $query)
+                ->withCount('tenantUsers')
+                ->get()
+                ->sum('tenant_users_count'),
+        ];
+    }
+
+    /**
+     * Teams statistics.
+     */
+    protected function getTeamsStatistics(): array
+    {
+        $query = Team::query();
+
+        $last30Days = Carbon::now()->subDays(30);
+
+        return [
+            'total' => (clone $query)->count(),
+
+            'active' => (clone $query)
+                ->where('is_active', true)
+                ->count(),
+
+            'inactive' => (clone $query)
+                ->where('is_active', false)
+                ->count(),
+
+            'new_last_30_days' => (clone $query)
+                ->where('created_at', '>=', $last30Days)
+                ->count(),
+
+            'members' => (clone $query)
+                ->withCount('tenantUsers')
+                ->get()
+                ->sum('tenant_users_count'),
+
+            'projects' => (clone $query)
+                ->withCount('projects')
+                ->get()
+                ->sum('projects_count'),
+
+            'tasks' => (clone $query)
+                ->withCount('tasks')
+                ->get()
+                ->sum('tasks_count'),
+        ];
+    }
+
+    /**
+     * Projects statistics.
+     */
+    protected function getProjectsStatistics(): array
+    {
+        $query = Project::query();
+
+        $today = Carbon::today();
+        $last30Days = Carbon::now()->subDays(30);
+
+        return [
+            'total' => (clone $query)->count(),
+
+            'active' => (clone $query)
+                ->where('is_active', true)
+                ->count(),
+
+            'inactive' => (clone $query)
+                ->where('is_active', false)
+                ->count(),
+
+            'deleted' => (clone $query)
+                ->onlyTrashed()
+                ->count(),
+
+            'new_last_30_days' => (clone $query)
+                ->where('created_at', '>=', $last30Days)
+                ->count(),
+
+            'planned' => (clone $query)
+                ->where('status', ProjectStatus::Planned->value)
+                ->count(),
+
+            'in_progress' => (clone $query)
+                ->where('status', ProjectStatus::InProgress->value)
+                ->count(),
+
+            'on_hold' => (clone $query)
+                ->where('status', ProjectStatus::OnHold->value)
+                ->count(),
+
+            'completed' => (clone $query)
+                ->where('status', ProjectStatus::Completed->value)
+                ->count(),
+
+            'cancelled' => (clone $query)
+                ->where('status', ProjectStatus::Cancelled->value)
+                ->count(),
+
+            'overdue' => (clone $query)
+                ->whereNotNull('end_date')
+                ->whereDate('end_date', '<', $today)
+                ->whereNotIn('status', [
+                    ProjectStatus::Completed->value,
+                    ProjectStatus::Cancelled->value,
+                ])
+                ->count(),
+
+            'without_team' => (clone $query)
+                ->doesntHave('teams')
+                ->count(),
+
+            'without_tasks' => (clone $query)
+                ->doesntHave('tasks')
+                ->count(),
+        ];
+    }
+
+    /**
+     * Tasks statistics.
+     */
+    protected function getTasksStatistics(): array
+    {
+        $query = Task::query();
+
+        $today = Carbon::today();
+        $last30Days = Carbon::now()->subDays(30);
+
+        return [
+            'total' => (clone $query)->count(),
+
+            'active' => (clone $query)
+                ->where('is_active', true)
+                ->count(),
+
+            'inactive' => (clone $query)
+                ->where('is_active', false)
+                ->count(),
+
+            'deleted' => (clone $query)
+                ->onlyTrashed()
+                ->count(),
+
+            'new_last_30_days' => (clone $query)
+                ->where('created_at', '>=', $last30Days)
+                ->count(),
+
+            'open' => (clone $query)
+                ->where('status', TaskStatus::OPEN->value)
+                ->count(),
+
+            'in_progress' => (clone $query)
+                ->where('status', TaskStatus::IN_PROGRESS->value)
+                ->count(),
+
+            'completed' => (clone $query)
+                ->where('status', TaskStatus::COMPLETED->value)
+                ->count(),
+
+            'on_hold' => (clone $query)
+                ->where('status', TaskStatus::OnHold->value)
+                ->count(),
+
+            'cancelled' => (clone $query)
+                ->where('status', TaskStatus::CANCELLED->value)
+                ->count(),
+
+            'overdue' => (clone $query)
+                ->whereNotNull('due_date')
+                ->where('due_date', '<', now())
+                ->whereNotIn('status', [
+                    TaskStatus::COMPLETED->value,
+                    TaskStatus::CANCELLED->value,
+                ])
+                ->count(),
+
+            'due_today' => (clone $query)
+                ->whereNotNull('due_date')
+                ->whereDate('due_date', $today)
+                ->whereNotIn('status', [
+                    TaskStatus::COMPLETED->value,
+                    TaskStatus::CANCELLED->value,
+                ])
+                ->count(),
+        ];
+    }
+
+    /**
+     * Activity statistics.
+     */
+    protected function getActivityStatistics(): array
+    {
+        $query = Activity::query();
+
+        $last30Days = Carbon::now()->subDays(30);
+
+        return [
+            'total' => (clone $query)->count(),
+
+            'last_30_days' => (clone $query)
+                ->where('created_at', '>=', $last30Days)
+                ->count(),
+
+            'today' => (clone $query)
+                ->whereDate('created_at', Carbon::today())
+                ->count(),
+
+            'latest' => (clone $query)
+                ->latest()
+                ->limit(10)
+                ->get([
+                    'id',
+                    'log_name',
+                    'description',
+                    'subject_type',
+                    'subject_id',
+                    'causer_type',
+                    'causer_id',
+                    'created_at',
+                ]),
+        ];
+    }
+}
